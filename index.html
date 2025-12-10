@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Equipes - Supervisor Master</title>
+    <title>Gestão de Equipes - Supervisor Pro</title>
     <style>
         :root {
             --bg-color: #f4f5f7;
@@ -25,6 +25,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden; /* Evita scroll na página inteira, foca no board */
         }
 
         /* --- HEADER --- */
@@ -36,6 +37,8 @@
             flex-direction: column;
             gap: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+            transition: margin-top 0.3s ease;
         }
 
         .header-top { display: flex; justify-content: space-between; align-items: center; }
@@ -65,6 +68,29 @@
         .btn-info { background-color: var(--info-color); color: white; }
         .btn-print { background-color: #34495e; color: white; border: 1px solid #7f8c8d; }
 
+        /* --- DASHBOARD DE ESTATÍSTICAS --- */
+        #dashboard-stats {
+            background: white;
+            padding: 10px 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-badge {
+            display: inline-flex; align-items: center; padding: 4px 8px;
+            border-radius: 4px; background: #f0f2f5; color: #333;
+            font-weight: 600; border: 1px solid #dfe1e6;
+        }
+        .stat-badge.total { background: #2c3e50; color: white; border: 1px solid #2c3e50; font-size: 0.9rem; }
+        .stat-divider { width: 1px; height: 20px; background: #ccc; margin: 0 5px; }
+        .stat-group-label { font-size: 0.75rem; text-transform: uppercase; color: #666; margin-right: 5px; font-weight: 700; }
+
         /* --- BOARD --- */
         #board {
             flex: 1;
@@ -73,7 +99,15 @@
             padding: 20px;
             gap: 15px;
             align-items: flex-start;
+            /* Scrollbar styling for horizontal scroll */
+            scrollbar-width: thin;
+            scrollbar-color: #bfc4ce #ebecf0;
         }
+        
+        /* Custom Scrollbar for Chrome/Safari */
+        #board::-webkit-scrollbar { height: 12px; }
+        #board::-webkit-scrollbar-track { background: #f4f5f7; }
+        #board::-webkit-scrollbar-thumb { background-color: #bfc4ce; border-radius: 20px; border: 3px solid #f4f5f7; }
 
         #historyBanner {
             display: none;
@@ -89,7 +123,7 @@
             border-radius: 8px;
             padding: 10px;
             display: flex; flex-direction: column;
-            max-height: 90%;
+            max-height: 100%; /* Ocupa altura disponível */
             border-top: 4px solid transparent; 
         }
 
@@ -113,7 +147,13 @@
         .member-list {
             flex: 1; overflow-y: auto; min-height: 50px;
             padding-right: 4px;
+            /* Custom Scrollbar inside columns */
+            scrollbar-width: thin;
+            scrollbar-color: #bfc4ce #ebecf0;
         }
+        .member-list::-webkit-scrollbar { width: 8px; }
+        .member-list::-webkit-scrollbar-track { background: #ebecf0; }
+        .member-list::-webkit-scrollbar-thumb { background-color: #bfc4ce; border-radius: 10px; }
 
         /* Cartão (Membro) */
         .card {
@@ -159,9 +199,36 @@
         .readonly-mode .col-del-btn { display: none !important; }
         .readonly-mode .column-title { pointer-events: none; }
 
+        /* --- BOTÃO FLUTUANTE DE FOCO --- */
+        #focus-toggle-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background-color: #2c3e50;
+            color: white;
+            font-size: 1.5rem;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+            transition: transform 0.2s, background 0.2s;
+        }
+        #focus-toggle-btn:hover { transform: scale(1.1); background-color: #34495e; }
+
+        /* --- CLASSE DE FOCO (Esconde menus) --- */
+        body.focus-active header,
+        body.focus-active #dashboard-stats,
+        body.focus-active #historyBanner {
+            display: none !important;
+        }
+
         /* --- MODAL --- */
         .modal {
-            display: none; position: fixed; z-index: 100;
+            display: none; position: fixed; z-index: 2100; /* Acima do botão flutuante */
             left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.5);
             justify-content: center; align-items: center;
@@ -179,29 +246,16 @@
         .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
         .role-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
 
-        /* --- AREA DE IMPRESSÃO (Escondida na tela normal) --- */
+        /* --- AREA DE IMPRESSÃO --- */
         #print-area { display: none; }
-
-        /* --- MEDIA QUERY DE IMPRESSÃO --- */
         @media print {
-            body * { visibility: hidden; } /* Esconde tudo */
-            #print-area, #print-area * { visibility: visible; } /* Mostra só o relatório */
-            
-            #print-area {
-                display: block;
-                position: absolute;
-                left: 0; top: 0;
-                width: 100%;
-                background: white;
-                color: black;
-                padding: 20px;
-            }
-
-            /* Estilo do Relatório Impresso */
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { display: block; position: absolute; left: 0; top: 0; width: 100%; background: white; color: black; padding: 20px; }
             .print-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+            .print-stats { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; display: flex; gap: 15px; flex-wrap: wrap; }
             .print-team { margin-bottom: 25px; page-break-inside: avoid; }
             .print-team h3 { background: #eee; padding: 5px; margin: 0 0 10px 0; border-bottom: 1px solid #999; }
-            
             table { width: 100%; border-collapse: collapse; font-size: 12px; }
             th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
             th { background-color: #f0f0f0; }
@@ -234,19 +288,23 @@
     </div>
 </header>
 
+<div id="dashboard-stats"></div>
+
+<button id="focus-toggle-btn" onclick="toggleFocusMode()" title="Alternar Modo Tela Cheia / Foco">
+    ⛶
+</button>
+
 <div id="historyBanner"></div>
 
 <div id="board"></div>
 
-<div id="print-area">
-    </div>
+<div id="print-area"></div>
 
 <div id="memberModal" class="modal">
     <div class="modal-content">
         <h3 id="modalTitle">Novo Colaborador</h3>
         <input type="hidden" id="memId">
         <input type="hidden" id="memTeamId">
-        
         <div class="form-group">
             <label>Nome:</label>
             <input type="text" id="memName" placeholder="Nome completo">
@@ -299,10 +357,10 @@
         roles: [{ id: 'r1', name: 'Líder', color: '#e74c3c' }, { id: 'r2', name: 'Operador', color: '#3498db' }]
     };
 
-    let liveData = JSON.parse(localStorage.getItem('teamDataV5')) || defaultData;
-    let historyData = JSON.parse(localStorage.getItem('teamHistoryV5')) || {};
+    let liveData = JSON.parse(localStorage.getItem('teamDataV8')) || defaultData;
+    let historyData = JSON.parse(localStorage.getItem('teamHistoryV8')) || {};
     let isViewingHistory = false;
-    let currentData = liveData; // Aponta para o dado sendo visualizado no momento
+    let currentData = liveData;
     let draggedItem = null;
 
     // --- INICIALIZAÇÃO ---
@@ -313,9 +371,25 @@
 
     renderBoard(liveData);
 
+    // --- NOVO: FUNÇÃO DE FOCO (TELA CHEIA) ---
+    function toggleFocusMode() {
+        document.body.classList.toggle('focus-active');
+        const btn = document.getElementById('focus-toggle-btn');
+        // Muda o ícone dependendo do estado
+        if(document.body.classList.contains('focus-active')){
+            btn.innerText = "✖"; // Ícone de fechar/sair
+            btn.style.backgroundColor = "#e74c3c"; // Vermelho para indicar "Sair"
+        } else {
+            btn.innerText = "⛶"; // Ícone de expandir
+            btn.style.backgroundColor = "#2c3e50";
+        }
+    }
+
     // --- RENDERIZAÇÃO ---
     function renderBoard(dataToRender) {
-        currentData = dataToRender; // Atualiza referência global para impressão
+        currentData = dataToRender;
+        updateDashboard(dataToRender);
+
         const board = document.getElementById('board');
         board.innerHTML = '';
 
@@ -364,199 +438,86 @@
         });
     }
 
-    // --- IMPRESSÃO (NOVO) ---
+    // --- DASHBOARD ---
+    function updateDashboard(data) {
+        const container = document.getElementById('dashboard-stats');
+        let total = 0; let roleCounts = {}; let areaCounts = {};
+        data.teams.forEach(t => {
+            total += t.members.length;
+            t.members.forEach(m => {
+                if(m.roleId) roleCounts[m.roleId] = (roleCounts[m.roleId] || 0) + 1;
+                if(m.area) areaCounts[m.area] = (areaCounts[m.area] || 0) + 1;
+            });
+        });
+        let html = `<span class="stat-badge total">Total: ${total}</span> <div class="stat-divider"></div>`;
+        html += `<span class="stat-group-label">Cargos:</span>`;
+        data.roles.forEach(r => {
+            const count = roleCounts[r.id] || 0;
+            if(count > 0) html += `<span class="stat-badge" style="border-left: 3px solid ${r.color}; margin-right:5px;">${r.name}: ${count}</span>`;
+        });
+        html += `<div class="stat-divider"></div> <span class="stat-group-label">Máquinas:</span>`;
+        Object.keys(areaCounts).sort().forEach(area => {
+            html += `<span class="stat-badge" style="margin-right:5px;">📍 ${area}: ${areaCounts[area]}</span>`;
+        });
+        container.innerHTML = html;
+    }
+
+    // --- IMPRESSÃO ---
     function generateAndPrint() {
         const printArea = document.getElementById('print-area');
         const now = new Date();
-        const dateStr = now.toLocaleDateString('pt-BR');
-        const timeStr = now.toLocaleTimeString('pt-BR');
-        const viewMode = isViewingHistory 
-            ? `REGISTRO HISTÓRICO: ${document.getElementById('monthPicker').value}` 
-            : "POSIÇÃO ATUAL (AO VIVO)";
-
+        const viewMode = isViewingHistory ? `HISTÓRICO: ${document.getElementById('monthPicker').value}` : "POSIÇÃO ATUAL";
+        const statsHTML = document.getElementById('dashboard-stats').innerHTML;
         let html = `
-            <div class="print-header">
-                <h2>Relatório de Distribuição de Equipes</h2>
-                <p><strong>Status:</strong> ${viewMode} | <strong>Gerado em:</strong> ${dateStr} às ${timeStr}</p>
-            </div>
+            <div class="print-header"><h2>Relatório de Turno</h2><p><strong>${viewMode}</strong> | ${now.toLocaleString()}</p></div>
+            <div class="print-stats">${statsHTML}</div>
         `;
-
-        // Loop nas equipes para criar tabelas
         currentData.teams.forEach(team => {
-            if (team.members.length === 0) return; // Pula equipes vazias na impressão
-
-            html += `
-                <div class="print-team">
-                    <h3>${team.title} (Total: ${team.members.length})</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 40%">Colaborador</th>
-                                <th style="width: 25%">Cargo</th>
-                                <th style="width: 35%">Máquina / Área</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
+            if (team.members.length === 0) return;
+            html += `<div class="print-team"><h3>${team.title} (${team.members.length})</h3><table><thead><tr><th style="width:40%">Nome</th><th style="width:25%">Cargo</th><th style="width:35%">Máquina</th></tr></thead><tbody>`;
             team.members.forEach(member => {
                 const roleObj = currentData.roles.find(r => r.id === member.roleId) || { name: '-', color: '#000' };
-                html += `
-                    <tr>
-                        <td><strong>${member.name}</strong></td>
-                        <td>${roleObj.name}</td>
-                        <td>${member.area || '-'}</td>
-                    </tr>
-                `;
+                html += `<tr><td><strong>${member.name}</strong></td><td>${roleObj.name}</td><td>${member.area || '-'}</td></tr>`;
             });
-
             html += `</tbody></table></div>`;
         });
-
-        html += `<div style="margin-top:30px; border-top:1px solid #ccc; padding-top:10px; font-size:10px; text-align:center;">Gestão de Supervisor - Documento Interno</div>`;
-
         printArea.innerHTML = html;
         window.print();
     }
 
-    // --- CRUD MEMBROS ---
-    function openMemberModal(teamId) {
-        if (isViewingHistory) return;
-        if (liveData.roles.length === 0) return alert("Cadastre cargos primeiro!");
-        document.getElementById('modalTitle').innerText = "Novo Colaborador";
-        document.getElementById('memId').value = "";
-        document.getElementById('memTeamId').value = teamId;
-        document.getElementById('memName').value = "";
-        document.getElementById('memAreaSelect').value = "";
-        populateRoleSelect();
-        document.getElementById('memberModal').style.display = 'flex';
-        document.getElementById('memName').focus();
-    }
-    function editMember(teamId, memberId) {
-        if (isViewingHistory) return;
-        const team = liveData.teams.find(t => t.id === teamId);
-        const member = team.members.find(m => m.id === memberId);
-        document.getElementById('modalTitle').innerText = "Editar Colaborador";
-        document.getElementById('memId').value = memberId;
-        document.getElementById('memTeamId').value = teamId;
-        document.getElementById('memName').value = member.name;
-        document.getElementById('memAreaSelect').value = member.area || "";
-        populateRoleSelect(member.roleId);
-        document.getElementById('memberModal').style.display = 'flex';
-    }
-    function populateRoleSelect(selectedId = null) {
-        const select = document.getElementById('memRoleSelect'); select.innerHTML = '';
-        liveData.roles.forEach(role => {
-            const opt = document.createElement('option'); opt.value = role.id; opt.innerText = role.name;
-            if (role.id === selectedId) opt.selected = true;
-            select.appendChild(opt);
-        });
-    }
-    function saveMember() {
-        const teamId = document.getElementById('memTeamId').value;
-        const memberId = document.getElementById('memId').value;
-        const name = document.getElementById('memName').value;
-        const roleId = document.getElementById('memRoleSelect').value;
-        const area = document.getElementById('memAreaSelect').value;
-        if (!name || !roleId || !area) return alert("Preencha todos os campos!");
-        
-        const team = liveData.teams.find(t => t.id === teamId);
-        if (memberId) {
-            const member = team.members.find(m => m.id === memberId);
-            member.name = name; member.roleId = roleId; member.area = area;
-        } else {
-            team.members.push({ id: 'm' + Date.now(), name, roleId, area });
-        }
-        saveData(); closeModal('memberModal');
-    }
-    function deleteMember(teamId, memberId) {
-        if (isViewingHistory) return;
-        if(confirm("Remover colaborador?")) {
-            const team = liveData.teams.find(t => t.id === teamId);
-            team.members = team.members.filter(m => m.id !== memberId);
-            saveData();
-        }
-    }
+    // --- CRUD ---
+    function openMemberModal(teamId) { if(isViewingHistory) return; if(liveData.roles.length===0) return alert("Cadastre cargos!"); document.getElementById('modalTitle').innerText="Novo"; document.getElementById('memId').value=""; document.getElementById('memTeamId').value=teamId; document.getElementById('memName').value=""; document.getElementById('memAreaSelect').value=""; populateRoleSelect(); document.getElementById('memberModal').style.display='flex'; document.getElementById('memName').focus(); }
+    function editMember(teamId, memberId) { if(isViewingHistory) return; const t=liveData.teams.find(x=>x.id===teamId); const m=t.members.find(x=>x.id===memberId); document.getElementById('modalTitle').innerText="Editar"; document.getElementById('memId').value=memberId; document.getElementById('memTeamId').value=teamId; document.getElementById('memName').value=m.name; document.getElementById('memAreaSelect').value=m.area||""; populateRoleSelect(m.roleId); document.getElementById('memberModal').style.display='flex'; }
+    function populateRoleSelect(sid=null) { const s=document.getElementById('memRoleSelect'); s.innerHTML=''; liveData.roles.forEach(r=>{ const o=document.createElement('option'); o.value=r.id; o.innerText=r.name; if(r.id===sid)o.selected=true; s.appendChild(o); }); }
+    function saveMember() { const tid=document.getElementById('memTeamId').value, mid=document.getElementById('memId').value, n=document.getElementById('memName').value, rid=document.getElementById('memRoleSelect').value, a=document.getElementById('memAreaSelect').value; if(!n||!rid||!a) return alert("Preencha tudo!"); const t=liveData.teams.find(x=>x.id===tid); if(mid){ const m=t.members.find(x=>x.id===mid); m.name=n; m.roleId=rid; m.area=a; } else { t.members.push({id:'m'+Date.now(), name:n, roleId:rid, area:a}); } saveData(); closeModal('memberModal'); }
+    function deleteMember(tid, mid) { if(isViewingHistory) return; if(confirm("Remover?")) { const t=liveData.teams.find(x=>x.id===tid); t.members=t.members.filter(x=>x.id!==mid); saveData(); } }
 
     // --- GERAIS ---
-    function saveData() {
-        localStorage.setItem('teamDataV5', JSON.stringify(liveData));
-        localStorage.setItem('teamHistoryV5', JSON.stringify(historyData));
-        if (!isViewingHistory) renderBoard(liveData);
-    }
-    function addTeam() { if (isViewingHistory) return; liveData.teams.push({ id: 't'+Date.now(), title: 'Nova Equipe', members: [] }); saveData(); }
-    function deleteTeam(id) { if (isViewingHistory) return; if (confirm('Excluir equipe?')) { liveData.teams = liveData.teams.filter(t => t.id !== id); saveData(); } }
-    function updateTeamTitle(input, id) { const team = liveData.teams.find(t => t.id === id); if (team) { team.title = input.value; saveData(); } }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function saveData() { localStorage.setItem('teamDataV8', JSON.stringify(liveData)); localStorage.setItem('teamHistoryV8', JSON.stringify(historyData)); if(!isViewingHistory) renderBoard(liveData); }
+    function addTeam() { if(isViewingHistory) return; liveData.teams.push({id:'t'+Date.now(), title:'Nova Equipe', members:[]}); saveData(); }
+    function deleteTeam(id) { if(isViewingHistory) return; if(confirm('Excluir equipe?')) { liveData.teams=liveData.teams.filter(t=>t.id!==id); saveData(); } }
+    function updateTeamTitle(input, id) { const t=liveData.teams.find(x=>x.id===id); if(t) { t.title=input.value; saveData(); } }
+    function closeModal(id) { document.getElementById(id).style.display='none'; }
 
     // --- HISTÓRICO ---
-    function checkHistory() {
-        const picker = document.getElementById('monthPicker');
-        const monthKey = picker.value;
-        const banner = document.getElementById('historyBanner');
-        if (!monthKey) return loadCurrentLive();
-        if (historyData[monthKey]) {
-            isViewingHistory = true; document.body.classList.add('readonly-mode');
-            banner.style.display = 'block'; banner.innerText = `VISUALIZANDO REGISTRO DE: ${monthKey}`;
-            document.getElementById('btnSaveHistory').style.display = 'none';
-            document.getElementById('btnBackToLive').style.display = 'inline-block';
-            renderBoard(historyData[monthKey]);
-        } else { loadCurrentLive(); picker.value = monthKey; }
-    }
-    function saveHistorySnapshot() {
-        let monthKey = document.getElementById('monthPicker').value;
-        if (!monthKey) {
-            const now = new Date();
-            monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-            if(!confirm(`Salvar como fechamento do mês atual (${monthKey})?`)) return;
-            document.getElementById('monthPicker').value = monthKey;
-        }
-        historyData[monthKey] = JSON.parse(JSON.stringify(liveData));
-        saveData(); alert(`Posições salvas para ${monthKey}!`);
-    }
-    function loadCurrentLive() {
-        isViewingHistory = false; document.body.classList.remove('readonly-mode');
-        document.getElementById('monthPicker').value = "";
-        document.getElementById('historyBanner').style.display = 'none';
-        document.getElementById('btnSaveHistory').style.display = 'inline-block';
-        document.getElementById('btnBackToLive').style.display = 'none';
-        renderBoard(liveData);
-    }
+    function checkHistory() { const p=document.getElementById('monthPicker'), v=p.value; if(!v) return loadCurrentLive(); if(historyData[v]) { isViewingHistory=true; document.body.classList.add('readonly-mode'); document.getElementById('historyBanner').style.display='block'; document.getElementById('historyBanner').innerText=`HISTÓRICO: ${v}`; document.getElementById('btnSaveHistory').style.display='none'; document.getElementById('btnBackToLive').style.display='inline-block'; renderBoard(historyData[v]); } else { loadCurrentLive(); p.value=v; } }
+    function saveHistorySnapshot() { let v=document.getElementById('monthPicker').value; if(!v) { const n=new Date(); v=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`; if(!confirm(`Salvar mês atual (${v})?`)) return; document.getElementById('monthPicker').value=v; } historyData[v]=JSON.parse(JSON.stringify(liveData)); saveData(); alert("Salvo!"); }
+    function loadCurrentLive() { isViewingHistory=false; document.body.classList.remove('readonly-mode'); document.getElementById('monthPicker').value=""; document.getElementById('historyBanner').style.display='none'; document.getElementById('btnSaveHistory').style.display='inline-block'; document.getElementById('btnBackToLive').style.display='none'; renderBoard(liveData); }
 
-    // --- CARGOS & BACKUP ---
-    function openRoleModal() { if(isViewingHistory) return; renderRolesList(); document.getElementById('roleModal').style.display='flex'; }
+    // --- EXTRAS ---
+    function openRoleModal() { if(isViewingHistory)return; renderRolesList(); document.getElementById('roleModal').style.display='flex'; }
     function addNewRole() { const n=document.getElementById('newRoleName').value, c=document.getElementById('newRoleColor').value; if(n){ liveData.roles.push({id:'r'+Date.now(),name:n,color:c}); document.getElementById('newRoleName').value=''; renderRolesList(); saveData(); } }
     function renderRolesList() { const c=document.getElementById('rolesListContainer'); c.innerHTML=''; liveData.roles.forEach(r=>{ const d=document.createElement('div'); d.className='role-list-item'; d.innerHTML=`<span style="color:${r.color};font-weight:bold;">${r.name}</span> <button class="btn-danger" style="font-size:0.7rem;" onclick="delRole('${r.id}')">Excluir</button>`; c.appendChild(d); }); }
     function delRole(id) { if(confirm("Excluir?")) { liveData.roles=liveData.roles.filter(r=>r.id!==id); renderRolesList(); saveData(); } }
-    
-    function downloadBackup() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({live:liveData, hist:historyData}));
-        const el = document.createElement('a'); el.href = dataStr; el.download = `backup_equipes_${new Date().toISOString().slice(0,10)}.json`; el.click();
-    }
-    function restoreBackup(input) {
-        const reader = new FileReader();
-        reader.onload = e => { try { const d = JSON.parse(e.target.result); if(d.live && d.hist) { if(confirm("Substituir dados atuais?")) { liveData=d.live; historyData=d.hist; saveData(); loadCurrentLive(); } } } catch(x) { alert("Erro"); } input.value=''; };
-        if(input.files[0]) reader.readAsText(input.files[0]);
-    }
+    function downloadBackup() { const a=document.createElement('a'); a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify({live:liveData, hist:historyData})); a.download=`backup_v8_${new Date().toISOString().slice(0,10)}.json`; a.click(); }
+    function restoreBackup(input) { const r=new FileReader(); r.onload=e=>{ try{ const d=JSON.parse(e.target.result); if(d.live&&d.hist){ if(confirm("Restaurar?")) { liveData=d.live; historyData=d.hist; saveData(); loadCurrentLive(); } } }catch(x){alert("Erro");} input.value=''; }; if(input.files[0]) r.readAsText(input.files[0]); }
 
-    // --- DRAG AND DROP ---
-    function dragStart(e) { draggedItem = this; setTimeout(()=>this.classList.add('dragging'),0); }
+    // --- DRAG ---
+    function dragStart(e) { draggedItem=this; setTimeout(()=>this.classList.add('dragging'),0); }
     function dragEnd() { this.classList.remove('dragging'); draggedItem=null; document.querySelectorAll('.member-list').forEach(l=>l.classList.remove('drag-over')); }
-    function allowDrop(e) { if(!isViewingHistory) {e.preventDefault(); e.currentTarget.classList.add('drag-over');} }
+    function allowDrop(e) { if(!isViewingHistory) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); } }
     function leaveDrop(e) { e.currentTarget.classList.remove('drag-over'); }
-    function drop(e) {
-        if(isViewingHistory) return;
-        e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-        const targetId = e.currentTarget.id;
-        const cardId = draggedItem.id;
-        let sTeam, mem;
-        liveData.teams.forEach(t => {
-            const i = t.members.findIndex(m => m.id === cardId);
-            if(i > -1) { sTeam = t; mem = t.members[i]; t.members.splice(i,1); }
-        });
-        liveData.teams.find(t=>t.id===targetId).members.push(mem);
-        saveData();
-    }
+    function drop(e) { if(isViewingHistory) return; e.preventDefault(); e.currentTarget.classList.remove('drag-over'); const tid=e.currentTarget.id, cid=draggedItem.id; let s,m; liveData.teams.forEach(t=>{ const i=t.members.findIndex(x=>x.id===cid); if(i>-1){s=t; m=t.members[i]; t.members.splice(i,1);} }); liveData.teams.find(x=>x.id===tid).members.push(m); saveData(); }
 </script>
 </body>
 </html>
