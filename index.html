@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kambam de Equipes - Escala 12x36</title>
     
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
@@ -24,8 +22,9 @@
     
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .drag-over { background-color: rgba(59, 130, 246, 0.1) !important; border: 2px dashed #3b82f6 !important; }
-        .dragging { opacity: 0.5; transform: scale(1.02); }
+        .drag-over-list { background-color: rgba(59, 130, 246, 0.05) !important; border: 2px dashed #3b82f6 !important; }
+        .dragging { opacity: 0.5; transform: scale(1.02) rotate(1deg); z-index: 50; }
+        .drag-over-card { border-top: 4px solid #3b82f6 !important; transform: translateY(2px); }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -37,294 +36,197 @@
 
 <div id="app" class="h-full flex flex-col overflow-hidden" v-cloak>
     
-    <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 p-4 shrink-0 relative z-20">
-        <div class="flex justify-between items-center max-w-full">
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Gestão de Turno - 12x36
-            </h1>
-            
-            <div class="flex items-center gap-3">
-                <div class="relative">
-                    <input type="text" v-model="searchQuery" placeholder="Buscar colaborador..." 
-                           class="w-64 pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all">
-                    <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
+    <div v-if="isAuthenticating" class="flex-1 flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
+    </div>
+
+    <div v-else-if="!currentUser" class="flex-1 flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Acesso Restrito</h2>
+                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">Insira as suas credenciais para aceder ao Kambam de gestão de turno.</p>
+            </div>
+
+            <form @submit.prevent="doLogin" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-mail</label>
+                    <input type="email" v-model="loginEmail" required class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Palavra-passe</label>
+                    <input type="password" v-model="loginPassword" required class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 outline-none transition-all">
                 </div>
 
-                <button @click="toggleTheme" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Alternar Tema">
-                    {{ isDark ? '☀️' : '🌙' }}
-                </button>
-                
-                <button @click="showLogs = !showLogs" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 relative">
-                    <span>📜 Histórico</span>
-                    <span v-if="unreadLogs" class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
-                </button>
-            </div>
-        </div>
-    </header>
+                <div v-if="authError" class="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400 text-center">
+                    {{ authError }}
+                </div>
 
-    <div class="flex flex-1 overflow-hidden relative">
-        <main class="flex-1 overflow-x-auto p-6" @click="showLogs = false">
-            <div class="flex gap-6 h-full items-start">
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-all">
+                    Entrar no Sistema
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div v-else class="flex flex-col h-full w-full">
+        <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 p-4 shrink-0 relative z-20">
+            <div class="flex justify-between items-center max-w-full">
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Gestão de Turno - 12x36
+                </h1>
                 
-                <div v-for="(team, index) in db.teams" :key="team.id" 
-                     class="bg-gray-100 dark:bg-gray-800 rounded-xl w-[320px] min-w-[320px] max-h-full flex flex-col shadow-sm border transition-all duration-300"
-                     :class="getTeamStatus(index).borderColor">
+                <div class="flex items-center gap-3">
+                    <span v-if="syncing" class="text-xs text-brand-500 font-bold animate-pulse">A Sincronizar...</span>
                     
-                    <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                        <div class="flex justify-between items-center mb-2">
-                            <div class="flex items-center gap-2 w-full">
-                                <input type="text" v-model="team.title" @change="saveData"
-                                       class="bg-transparent font-bold text-lg text-gray-800 dark:text-gray-100 focus:outline-none focus:bg-white dark:focus:bg-gray-700 px-1 rounded w-full transition-colors">
-                                <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold px-2 py-1 rounded-full shrink-0">
-                                    {{ team.members.length }}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div class="text-xs font-semibold px-2 py-1.5 rounded-md flex items-center gap-1.5"
-                             :class="getTeamStatus(index).badgeColor">
-                            <span v-html="getTeamStatus(index).icon"></span>
-                            {{ getTeamStatus(index).text }}
-                        </div>
+                    <div class="relative">
+                        <input type="text" v-model="searchQuery" placeholder="Buscar colaborador..." 
+                               class="w-64 pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                        <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto p-3 space-y-3 min-h-[150px]"
-                         @dragover.prevent="allowDrop" @dragleave="leaveDrop" @drop="drop($event, team.id)">
+                    <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+                    <button @click="toggleTheme" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Alternar Tema">
+                        {{ isDark ? '☀️' : '🌙' }}
+                    </button>
+                    
+                    <button @click="showLogs = !showLogs" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 relative">
+                        <span>📜 Histórico</span>
+                        <span v-if="unreadLogs" class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
+                    </button>
+
+                    <button @click="doLogout" class="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-2 rounded-lg text-sm font-bold transition-colors">
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden relative">
+            <main class="flex-1 overflow-x-auto p-6" @click="showLogs = false">
+                <div class="flex gap-6 h-full items-start">
+                    
+                    <div v-for="(team, index) in db.teams" :key="team.id" 
+                         class="bg-gray-100 dark:bg-gray-800 rounded-xl w-[320px] min-w-[320px] max-h-full flex flex-col shadow-sm border transition-all duration-300"
+                         :class="getTeamStatus(index).borderColor">
                         
-                        <div v-for="member in filteredMembers(team.members)" :key="member.id"
-                             draggable="true" @dragstart="dragStart($event, member, team.id)" @dragend="dragEnd"
-                             class="bg-white dark:bg-gray-700 p-3 rounded-lg shadow-sm border-l-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group"
-                             :style="{ borderLeftColor: getRoleColor(member.roleId) }">
-                            
-                            <div class="flex justify-between items-start mb-2">
-                                <h4 class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{{ member.name }}</h4>
-                                <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                    <button @click.stop="editMember(team.id, member)" class="text-gray-400 hover:text-brand-500 text-xs px-1">✎</button>
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center gap-2 w-full">
+                                    <input type="text" v-model="team.title" @change="syncToFirebase"
+                                           class="bg-transparent font-bold text-lg text-gray-800 dark:text-gray-100 focus:outline-none focus:bg-white dark:focus:bg-gray-700 px-1 rounded w-full transition-colors">
+                                    <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold px-2 py-1 rounded-full shrink-0">
+                                        {{ team.members.length }}
+                                    </span>
                                 </div>
                             </div>
                             
-                            <div class="flex flex-wrap gap-2 mt-2">
-                                <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full text-white"
-                                      :style="{ backgroundColor: getRoleColor(member.roleId) }">
-                                    {{ getRoleName(member.roleId) }}
-                                </span>
-                                <span class="text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 flex items-center gap-1">
-                                    📍 {{ member.area }}
-                                </span>
+                            <div class="text-xs font-semibold px-2 py-1.5 rounded-md flex items-center gap-1.5" :class="getTeamStatus(index).badgeColor">
+                                <span v-html="getTeamStatus(index).icon"></span>
+                                {{ getTeamStatus(index).text }}
                             </div>
                         </div>
-                    </div>
 
-                    <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-b-xl">
-                        <button @click="openModal(team.id)" class="w-full py-2 flex items-center justify-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
-                            <span>+ Adicionar</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </main>
+                        <div class="flex-1 overflow-y-auto p-3 space-y-3 min-h-[150px]"
+                             @dragover.prevent="allowDropList" @dragleave="leaveDropList" @drop.prevent="dropOnList($event, team.id)">
+                            
+                            <div v-for="member in filteredMembers(team.members)" :key="member.id"
+                                 draggable="true" 
+                                 @dragstart="dragStart($event, member, team.id)" 
+                                 @dragend="dragEnd"
+                                 @dragenter.prevent="dragEnterCard($event)"
+                                 @dragover.prevent
+                                 @dragleave="dragLeaveCard($event)"
+                                 @drop.stop="dropOnCard($event, team.id, member)"
+                                 class="bg-white dark:bg-gray-700 p-3 rounded-lg shadow-sm border-l-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative"
+                                 :style="{ borderLeftColor: getRoleColor(member.roleId) }">
+                                
+                                <div class="flex justify-between items-start mb-2 pointer-events-none">
+                                    <h4 class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{{ member.name }}</h4>
+                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 pointer-events-auto">
+                                        <button @click.stop="editMember(team.id, member)" class="text-gray-400 hover:text-brand-500 text-xs px-1">✎</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-2 mt-2 pointer-events-none">
+                                    <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full text-white"
+                                          :style="{ backgroundColor: getRoleColor(member.roleId) }">
+                                        {{ getRoleName(member.roleId) }}
+                                    </span>
+                                    <span class="text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 flex items-center gap-1">
+                                        📍 {{ member.area }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
 
-        <aside class="absolute top-0 right-0 h-full w-80 bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 z-10 flex flex-col"
-               :class="showLogs ? 'translate-x-0' : 'translate-x-full'">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
-                <h2 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <span>📜</span> Histórico do Turno
-                </h2>
-                <button @click="showLogs = false" class="text-gray-500 hover:text-gray-800 dark:hover:text-white">✖</button>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-4 space-y-4">
-                <div v-if="db.logs.length === 0" class="text-center text-sm text-gray-500 mt-10">
-                    Nenhum registro no turno atual.
+                        <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-b-xl">
+                            <button @click="openModal(team.id)" class="w-full py-2 flex items-center justify-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
+                                <span>+ Adicionar</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div v-for="log in db.logs" :key="log.id" class="relative pl-4 border-l-2 border-brand-200 dark:border-gray-600">
-                    <span class="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-brand-500"></span>
-                    <p class="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">{{ log.time }}</p>
-                    <p class="text-sm text-gray-800 dark:text-gray-200">{{ log.message }}</p>
-                </div>
-            </div>
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                <button @click="clearLogs" class="w-full text-sm text-red-500 hover:text-red-700 font-medium py-2">Limpar Histórico</button>
-            </div>
-        </aside>
-    </div>
+            </main>
 
-    <div v-if="showModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
-            <div class="p-6">
-                <h3 class="text-xl font-bold mb-4">{{ modalData.id ? 'Editar' : 'Novo' }} Colaborador</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Completo</label>
-                        <input type="text" v-model="modalData.name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cargo</label>
-                        <select v-model="modalData.roleId" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 outline-none">
-                            <option v-for="role in db.roles" :value="role.id">{{ role.name }}</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Área / Máquina</label>
-                        <select v-model="modalData.area" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 outline-none">
-                            <option v-for="area in areas" :value="area">{{ area }}</option>
-                        </select>
+            <aside class="absolute top-0 right-0 h-full w-80 bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 z-10 flex flex-col"
+                   :class="showLogs ? 'translate-x-0' : 'translate-x-full'">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+                    <h2 class="font-bold text-gray-800 dark:text-white flex items-center gap-2"><span>📜</span> Histórico do Turno</h2>
+                    <button @click="showLogs = false" class="text-gray-500 hover:text-gray-800 dark:hover:text-white">✖</button>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div v-if="db.logs.length === 0" class="text-center text-sm text-gray-500 mt-10">Nenhum registo no turno.</div>
+                    <div v-for="log in db.logs" :key="log.id" class="relative pl-4 border-l-2 border-brand-200 dark:border-gray-600">
+                        <span class="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-brand-500"></span>
+                        <p class="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">{{ log.time }}</p>
+                        <p class="text-sm text-gray-800 dark:text-gray-200">{{ log.message }}</p>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end gap-3">
-                    <button @click="showModal = false" class="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancelar</button>
-                    <button @click="saveMember" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg">Guardar</button>
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                    <button @click="clearLogs" class="w-full text-sm text-red-500 hover:text-red-700 font-medium py-2">Limpar Histórico</button>
+                </div>
+            </aside>
+        </div>
+
+        <div v-if="showModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold mb-4">{{ modalData.id ? 'Editar' : 'Novo' }} Colaborador</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Completo</label>
+                            <input type="text" v-model="modalData.name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cargo</label>
+                            <select v-model="modalData.roleId" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option v-for="role in db.roles" :value="role.id">{{ role.name }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Área / Máquina</label>
+                            <select v-model="modalData.area" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option v-for="area in areas" :value="area">{{ area }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button @click="showModal = false" class="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancelar</button>
+                        <button @click="saveMember" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg">Guardar</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-    const { createApp, ref, onMounted, watch } = Vue;
+<script type="module" src="./app.js"></script>
 
-    createApp({
-        setup() {
-            const defaultDb = {
-                teams: [
-                    { id: 't1', title: 'Equipe 1', members: [] },
-                    { id: 't2', title: 'Equipe 2', members: [] },
-                    { id: 't3', title: 'Equipe 3', members: [] },
-                    { id: 't4', title: 'Equipe 4', members: [] }
-                ],
-                roles: [
-                    { id: 'r1', name: 'Líder', color: '#dc2626' }, 
-                    { id: 'r2', name: 'Operador', color: '#2563eb' }
-                ],
-                logs: [] 
-            };
-
-            const db = ref(defaultDb);
-            const isDark = ref(false);
-            const searchQuery = ref('');
-            const showModal = ref(false);
-            const showLogs = ref(false);
-            const unreadLogs = ref(false);
-            const areas = ["Controle do Produto", "Qualitron L4", "Qualitron L5", "Qualitron 6A", "Qualitron 6B", "Inspeção", "Outros / volante"];
-            const modalData = ref({ id: null, teamId: null, name: '', roleId: '', area: '' });
-            
-            let draggedItem = null;
-            let sourceTeamId = null;
-
-            onMounted(() => {
-                const saved = localStorage.getItem('kambamVueData12x36');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if(!parsed.logs) parsed.logs = []; 
-                    db.value = parsed;
-                }
-                const theme = localStorage.getItem('theme');
-                if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    isDark.value = true;
-                    document.documentElement.classList.add('dark');
-                }
-            });
-
-            watch(db, (newVal) => {
-                localStorage.setItem('kambamVueData12x36', JSON.stringify(newVal));
-            }, { deep: true });
-
-            watch(showLogs, (val) => {
-                if(val) unreadLogs.value = false; 
-            });
-
-            // --- LÓGICA ESCALA 12x36 ---
-            const getTeamStatus = (index) => {
-                const now = new Date();
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                
-                // Data Base (Âncora): 26 de Fevereiro de 2026
-                const anchor = new Date(2026, 1, 26); 
-                const diffDays = Math.floor((today - anchor) / (1000 * 60 * 60 * 24));
-                
-                const isEvenDay = diffDays % 2 === 0;
-                const hour = now.getHours();
-                const isDayShift = hour >= 6 && hour < 18;
-
-                const styleActiveDay = { text: 'Trabalhando (06h - 18h)', badgeColor: 'bg-green-100 text-green-800', borderColor: 'border-green-400 dark:border-green-600', icon: '☀️' };
-                const styleActiveNight = { text: 'Trabalhando (18h - 06h)', badgeColor: 'bg-indigo-100 text-indigo-800', borderColor: 'border-indigo-400 dark:border-indigo-500', icon: '🌙' };
-                const styleWaitingNight = { text: 'Entra hoje às 18h', badgeColor: 'bg-blue-50 text-blue-600', borderColor: 'border-gray-200 dark:border-gray-700', icon: '⏳' };
-                const styleOffDay = { text: 'Folga (Trabalhou ontem)', badgeColor: 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', borderColor: 'border-gray-200 dark:border-gray-700 opacity-80', icon: '🛌' };
-                const styleOff = { text: 'Folga', badgeColor: 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', borderColor: 'border-gray-200 dark:border-gray-700 opacity-70', icon: '🏠' };
-
-                if (index === 0) return isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; 
-                if (index === 1) return isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; 
-                if (index === 2) return !isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; 
-                if (index === 3) return !isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; 
-
-                return styleOff;
-            };
-
-            // --- SISTEMA DE LOGS ---
-            const addLog = (message) => {
-                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                db.value.logs.unshift({ id: Date.now(), time, message });
-                if (db.value.logs.length > 50) db.value.logs.pop(); 
-                if (!showLogs.value) unreadLogs.value = true;
-            };
-
-            const clearLogs = () => {
-                if(confirm('Apagar todo o histórico deste turno?')) db.value.logs = [];
-            };
-
-            // --- FUNÇÕES GERAIS ---
-            const getRoleName = (id) => (db.value.roles.find(x => x.id === id) || {}).name || '?';
-            const getRoleColor = (id) => (db.value.roles.find(x => x.id === id) || {}).color || '#ccc';
-            const filteredMembers = (members) => searchQuery.value ? members.filter(m => m.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || m.area.toLowerCase().includes(searchQuery.value.toLowerCase())) : members;
-            const toggleTheme = () => { isDark.value = !isDark.value; localStorage.setItem('theme', isDark.value ? 'dark' : 'light'); if(isDark.value) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); };
-            
-            const openModal = (teamId) => { modalData.value = { id: null, teamId, name: '', roleId: db.value.roles[0]?.id, area: areas[0] }; showModal.value = true; };
-            const editMember = (teamId, member) => { modalData.value = { ...member, teamId }; showModal.value = true; };
-            
-            const saveMember = () => {
-                if (!modalData.value.name) return alert('Preencha o nome!');
-                const team = db.value.teams.find(t => t.id === modalData.value.teamId);
-                
-                if (modalData.value.id) {
-                    const index = team.members.findIndex(m => m.id === modalData.value.id);
-                    const oldArea = team.members[index].area;
-                    team.members[index] = { ...modalData.value };
-                    if(oldArea !== modalData.value.area) addLog(`A área de ${modalData.value.name} foi alterada para ${modalData.value.area}.`);
-                } else {
-                    team.members.push({ id: 'm' + Date.now(), name: modalData.value.name, roleId: modalData.value.roleId, area: modalData.value.area });
-                    addLog(`Novo colaborador inserido: ${modalData.value.name} (${modalData.value.area}) em ${team.title}.`);
-                }
-                showModal.value = false;
-            };
-
-            // --- DRAG AND DROP ---
-            const dragStart = (e, member, teamId) => { draggedItem = member; sourceTeamId = teamId; setTimeout(() => e.target.classList.add('dragging'), 0); };
-            const dragEnd = (e) => { e.target.classList.remove('dragging'); document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over')); };
-            const allowDrop = (e) => { e.currentTarget.classList.add('drag-over'); };
-            const leaveDrop = (e) => { e.currentTarget.classList.remove('drag-over'); };
-            
-            const drop = (e, targetTeamId) => {
-                e.currentTarget.classList.remove('drag-over');
-                if (sourceTeamId === targetTeamId) return;
-
-                const sourceTeam = db.value.teams.find(t => t.id === sourceTeamId);
-                const targetTeam = db.value.teams.find(t => t.id === targetTeamId);
-                
-                sourceTeam.members = sourceTeam.members.filter(m => m.id !== draggedItem.id);
-                targetTeam.members.push(draggedItem);
-                
-                addLog(`Movimentação: ${draggedItem.name} saiu de ${sourceTeam.title} e foi para ${targetTeam.title}.`);
-                
-                draggedItem = null; sourceTeamId = null;
-            };
-
-            const saveData = () => { db.value = { ...db.value }; };
-
-            return { db, isDark, searchQuery, showModal, showLogs, unreadLogs, modalData, areas, getRoleName, getRoleColor, filteredMembers, toggleTheme, getTeamStatus, openModal, editMember, saveMember, dragStart, dragEnd, allowDrop, leaveDrop, drop, saveData, clearLogs };
-        }
-    }).mount('#app');
-</script>
 </body>
 </html>
