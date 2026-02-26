@@ -5,13 +5,14 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 // ==========================================
 // COLOQUE AS SUAS CHAVES DO FIREBASE AQUI
 // ==========================================
-export const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_PROJETO.firebaseapp.com",
-    projectId: "SEU_PROJETO",
-    storageBucket: "SEU_PROJETO.appspot.com",
-    messagingSenderId: "SEU_ID",
-    appId: "SEU_APP_ID"
+const firebaseConfig = {
+  apiKey: "AIzaSyCKkQ26NfSwcVXxm3pRM706MZ5Goo9yg7c",
+  authDomain: "kambam-equipes.firebaseapp.com",
+  projectId: "kambam-equipes",
+  storageBucket: "kambam-equipes.firebasestorage.app",
+  messagingSenderId: "870835450124",
+  appId: "1:870835450124:web:552998a893c81827d01929",
+  measurementId: "G-DVXBG1BPFV"
 };
 
 let firestoreDocRef = null;
