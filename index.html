@@ -90,6 +90,10 @@
 
                     <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
+                    <button @click="addTeam" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm hidden md:block">
+                        + Nova Equipe
+                    </button>
+
                     <button @click="toggleTheme" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Alternar Tema">
                         {{ isDark ? '☀️' : '🌙' }}
                     </button>
@@ -119,9 +123,12 @@
                                 <div class="flex items-center gap-2 w-full">
                                     <input type="text" v-model="team.title" @change="syncToFirebase"
                                            class="bg-transparent font-bold text-lg text-gray-800 dark:text-gray-100 focus:outline-none focus:bg-white dark:focus:bg-gray-700 px-1 rounded w-full transition-colors">
-                                    <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold px-2 py-1 rounded-full shrink-0">
-                                        {{ team.members.length }}
-                                    </span>
+                                    <div class="flex items-center gap-1">
+                                        <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold px-2 py-1 rounded-full shrink-0">
+                                            {{ team.members.length }}
+                                        </span>
+                                        <button @click="deleteTeam(team.id)" class="text-gray-400 hover:text-red-500 p-1 rounded transition-colors" title="Excluir equipe">✖</button>
+                                    </div>
                                 </div>
                             </div>
                             
