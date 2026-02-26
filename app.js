@@ -8,7 +8,7 @@ createApp({
         const loginEmail = ref('');
         const loginPassword = ref('');
         const authError = ref('');
-        const isAuthenticating = ref(true); // Começa true para verificar sessão antes de mostrar a tela
+        const isAuthenticating = ref(true);
 
         // Estado da Aplicação
         const db = ref({ teams: [], roles: [], logs: [] });
@@ -32,7 +32,6 @@ createApp({
                 document.documentElement.classList.add('dark');
             }
 
-            // Escuta as mudanças de login/logout
             if (auth) {
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
@@ -40,7 +39,7 @@ createApp({
                         loadDatabase();
                     } else {
                         currentUser.value = null;
-                        if (unsubscribeSnapshot) unsubscribeSnapshot(); // Para de ler a base de dados se fizer logout
+                        if (unsubscribeSnapshot) unsubscribeSnapshot();
                     }
                     isAuthenticating.value = false;
                 });
@@ -49,7 +48,6 @@ createApp({
             }
         });
 
-        // --- SISTEMA DE LOGIN ---
         const doLogin = async () => {
             authError.value = '';
             if (!loginEmail.value || !loginPassword.value) {
@@ -72,7 +70,6 @@ createApp({
             }
         };
 
-        // --- CARREGAR BASE DE DADOS (Só chamado após login) ---
         const loadDatabase = () => {
             if(firestoreDocRef) {
                 unsubscribeSnapshot = onSnapshot(firestoreDocRef, (docSnap) => {
@@ -90,7 +87,6 @@ createApp({
             }
         };
 
-        // Guardar na base de dados
         const syncToFirebase = async () => {
             if(!firestoreDocRef || !currentUser.value) return;
             syncing.value = true;
@@ -103,21 +99,44 @@ createApp({
             }
         };
 
+        // --- GESTÃO DE EQUIPES ---
+        const addTeam = () => {
+            db.value.teams.push({
+                id: 't' + Date.now(),
+                title: 'Nova Equipe',
+                members: []
+            });
+            addLog(`Uma nova equipe foi criada.`);
+            syncToFirebase();
+        };
+
+        const deleteTeam = (teamId) => {
+            if (confirm("Tem certeza que deseja remover esta equipe inteira? Todos os colaboradores nela serão removidos do painel.")) {
+                const teamName = db.value.teams.find(t => t.id === teamId)?.title || 'Equipe';
+                db.value.teams = db.value.teams.filter(t => t.id !== teamId);
+                addLog(`A equipe "${teamName}" foi removida.`);
+                syncToFirebase();
+            }
+        };
+
         const getTeamStatus = (index) => {
             const diffDays = Math.floor((new Date().setHours(0,0,0,0) - new Date(2026, 1, 26)) / (1000 * 60 * 60 * 24));
             const isEvenDay = diffDays % 2 === 0;
             const isDayShift = new Date().getHours() >= 6 && new Date().getHours() < 18;
 
-            const styleActiveDay = { text: 'A Trabalhar (06h - 18h)', badgeColor: 'bg-green-100 text-green-800', borderColor: 'border-green-400 dark:border-green-600', icon: '☀️' };
-            const styleActiveNight = { text: 'A Trabalhar (18h - 06h)', badgeColor: 'bg-indigo-100 text-indigo-800', borderColor: 'border-indigo-400 dark:border-indigo-500', icon: '🌙' };
+            const styleActiveDay = { text: 'Trabalhando (06h - 18h)', badgeColor: 'bg-green-100 text-green-800', borderColor: 'border-green-400 dark:border-green-600', icon: '☀️' };
+            const styleActiveNight = { text: 'Trabalhando (18h - 06h)', badgeColor: 'bg-indigo-100 text-indigo-800', borderColor: 'border-indigo-400 dark:border-indigo-500', icon: '🌙' };
             const styleWaitingNight = { text: 'Entra hoje às 18h', badgeColor: 'bg-blue-50 text-blue-600', borderColor: 'border-gray-200 dark:border-gray-700', icon: '⏳' };
             const styleOffDay = { text: 'Folga (Trabalhou ontem)', badgeColor: 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', borderColor: 'border-gray-200 dark:border-gray-700 opacity-80', icon: '🛌' };
-            const styleOff = { text: 'Folga', badgeColor: 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', borderColor: 'border-gray-200 dark:border-gray-700 opacity-70', icon: '🏠' };
+            const styleOff = { text: 'Apoio / Extra', badgeColor: 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', borderColor: 'border-gray-200 dark:border-gray-700 opacity-70', icon: '⚙️' };
 
+            // Aplica a lógica 12x36 apenas nas 4 primeiras equipes
             if (index === 0) return isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; 
             if (index === 1) return isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; 
             if (index === 2) return !isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; 
             if (index === 3) return !isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; 
+            
+            // Equipes adicionais assumem status neutro de apoio
             return styleOff;
         };
 
@@ -210,11 +229,11 @@ createApp({
         };
 
         return { 
-            currentUser, isAuthenticating, loginEmail, loginPassword, authError, doLogin, doLogout, // Variáveis novas de Login
+            currentUser, isAuthenticating, loginEmail, loginPassword, authError, doLogin, doLogout,
             db, isDark, searchQuery, showModal, showLogs, unreadLogs, syncing, modalData, areas, 
             getRoleName, getRoleColor, filteredMembers, toggleTheme, getTeamStatus, openModal, editMember, saveMember, 
             dragStart, dragEnd, allowDropList, leaveDropList, dropOnList, dragEnterCard, dragLeaveCard, dropOnCard, 
-            syncToFirebase, clearLogs 
+            syncToFirebase, clearLogs, addTeam, deleteTeam // Funções de equipe exportadas aqui
         };
     }
 }).mount('#app');
