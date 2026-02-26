@@ -64,7 +64,7 @@
     </header>
 
     <div class="flex flex-1 overflow-hidden relative">
-        <main class="flex-1 overflow-x-auto p-6" @click="if(showLogs) showLogs = false">
+        <main class="flex-1 overflow-x-auto p-6" @click="showLogs = false">
             <div class="flex gap-6 h-full items-start">
                 
                 <div v-for="(team, index) in db.teams" :key="team.id" 
@@ -197,7 +197,7 @@
                     { id: 'r1', name: 'Líder', color: '#dc2626' }, 
                     { id: 'r2', name: 'Operador', color: '#2563eb' }
                 ],
-                logs: [] // Novo: Array para salvar o histórico
+                logs: [] 
             };
 
             const db = ref(defaultDb);
@@ -216,7 +216,7 @@
                 const saved = localStorage.getItem('kambamVueData12x36');
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    if(!parsed.logs) parsed.logs = []; // Garantir retrocompatibilidade
+                    if(!parsed.logs) parsed.logs = []; 
                     db.value = parsed;
                 }
                 const theme = localStorage.getItem('theme');
@@ -231,7 +231,7 @@
             }, { deep: true });
 
             watch(showLogs, (val) => {
-                if(val) unreadLogs.value = false; // Limpa o "aviso" de nova notificação
+                if(val) unreadLogs.value = false; 
             });
 
             // --- LÓGICA ESCALA 12x36 ---
@@ -248,17 +248,16 @@
                 const hour = now.getHours();
                 const isDayShift = hour >= 6 && hour < 18;
 
-                // Estilos Base
                 const styleActiveDay = { text: 'Trabalhando (06h - 18h)', badgeColor: 'bg-green-100 text-green-800', borderColor: 'border-green-400 dark:border-green-600', icon: '☀️' };
                 const styleActiveNight = { text: 'Trabalhando (18h - 06h)', badgeColor: 'bg-indigo-100 text-indigo-800', borderColor: 'border-indigo-400 dark:border-indigo-500', icon: '🌙' };
                 const styleWaitingNight = { text: 'Entra hoje às 18h', badgeColor: 'bg-blue-50 text-blue-600', borderColor: 'border-gray-200 dark:border-gray-700', icon: '⏳' };
                 const styleOffDay = { text: 'Folga (Trabalhou ontem)', badgeColor: 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', borderColor: 'border-gray-200 dark:border-gray-700 opacity-80', icon: '🛌' };
                 const styleOff = { text: 'Folga', badgeColor: 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', borderColor: 'border-gray-200 dark:border-gray-700 opacity-70', icon: '🏠' };
 
-                if (index === 0) return isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; // Equipe 1
-                if (index === 1) return isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; // Equipe 2
-                if (index === 2) return !isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; // Equipe 3
-                if (index === 3) return !isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; // Equipe 4
+                if (index === 0) return isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; 
+                if (index === 1) return isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; 
+                if (index === 2) return !isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; 
+                if (index === 3) return !isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; 
 
                 return styleOff;
             };
@@ -267,7 +266,7 @@
             const addLog = (message) => {
                 const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 db.value.logs.unshift({ id: Date.now(), time, message });
-                if (db.value.logs.length > 50) db.value.logs.pop(); // Mantém apenas os últimos 50
+                if (db.value.logs.length > 50) db.value.logs.pop(); 
                 if (!showLogs.value) unreadLogs.value = true;
             };
 
