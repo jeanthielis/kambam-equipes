@@ -13,11 +13,14 @@ createApp({
         const isDark = ref(false);
         const searchQuery = ref('');
         const showModal = ref(false);
+        const showRoleModal = ref(false);
         const showLogs = ref(false);
         const unreadLogs = ref(false);
         const syncing = ref(false);
+        
         const areas = ["Controle do Produto", "Qualitron L4", "Qualitron L5", "Qualitron 6A", "Qualitron 6B", "Inspeção", "Outros / volante"];
         const modalData = ref({ id: null, teamId: null, name: '', roleId: '', area: '' });
+        const newRoleData = ref({ name: '', color: '#6366f1' });
         
         let draggedItem = null;
         let sourceTeamId = null;
@@ -66,10 +69,11 @@ createApp({
                 unsubscribeSnapshot = onSnapshot(firestoreDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         db.value = docSnap.data();
+                        if(!db.value.roles) db.value.roles = []; // Garantia retroativa
                     } else {
                         db.value = {
                             teams: [ { id: 't1', title: 'Equipe 1', members: [] }, { id: 't2', title: 'Equipe 2', members: [] }, { id: 't3', title: 'Equipe 3', members: [] }, { id: 't4', title: 'Equipe 4', members: [] } ],
-                            roles: [ { id: 'r1', name: 'Líder', color: '#dc2626' }, { id: 'r2', name: 'Operador', color: '#2563eb' } ],
+                            roles: [ { id: 'r1', name: 'Líder', color: '#ef4444' }, { id: 'r2', name: 'Operador', color: '#3b82f6' } ],
                             logs: []
                         };
                         syncToFirebase();
@@ -86,6 +90,7 @@ createApp({
             finally { syncing.value = false; }
         };
 
+        // --- GESTÃO DE EQUIPES ---
         const addTeam = () => {
             db.value.teams.push({ id: 't' + Date.now(), title: 'Nova Equipe', members: [] });
             addLog(`Uma nova equipe foi criada.`); syncToFirebase();
@@ -99,28 +104,41 @@ createApp({
             }
         };
 
-        // --- LÓGICA DE DESTAQUE REFINADA ---
+        // --- GESTÃO DE CARGOS ---
+        const saveRole = () => {
+            if (!newRoleData.value.name) return;
+            db.value.roles.push({ id: 'r' + Date.now(), name: newRoleData.value.name, color: newRoleData.value.color });
+            newRoleData.value.name = '';
+            newRoleData.value.color = '#6366f1';
+            syncToFirebase();
+        };
+
+        const deleteRole = (roleId) => {
+            if (confirm("Excluir este cargo? Os colaboradores atuais manterão a função até serem editados.")) {
+                db.value.roles = db.value.roles.filter(r => r.id !== roleId);
+                syncToFirebase();
+            }
+        };
+
+        // --- STATUS DA ESCALA ---
         const getTeamStatus = (index) => {
             const diffDays = Math.floor((new Date().setHours(0,0,0,0) - new Date(2026, 1, 26)) / (1000 * 60 * 60 * 24));
             const isEvenDay = diffDays % 2 === 0;
             const hour = new Date().getHours();
             const isDayShift = hour >= 6 && hour < 18;
 
-            // ESTILO 1: Equipa que está ATIVAMENTE a trabalhar agora (Destaque Verde Forte)
             const styleWorkingNow = { 
                 text: isDayShift ? 'No Turno (06h - 18h)' : 'No Turno (18h - 06h)', 
                 badgeColor: 'bg-green-500/15 text-green-700 dark:text-green-400', 
-                borderColor: 'border-2 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.15)] dark:bg-[#0A1A10]', // Fundo sutilmente verde no escuro
+                borderColor: 'border-2 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.15)] dark:bg-[#0A1A10]', 
                 icon: '<i class="ph-fill ph-check-circle text-green-600 dark:text-green-400 text-sm"></i>' 
             };
 
-            // ESTILO 2: Restantes equipas (Neutras, bordas quase invisíveis)
             const styleWaitingNight = { text: 'Entra às 18h', badgeColor: 'bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400', borderColor: 'border border-zinc-200 dark:border-white/5', icon: '<i class="ph-fill ph-clock text-zinc-400 text-sm"></i>' };
             const styleOffDay = { text: 'Folga (Saiu às 06h)', badgeColor: 'bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400', borderColor: 'border border-zinc-200 dark:border-white/5', icon: '<i class="ph-fill ph-moon-stars text-zinc-400 text-sm"></i>' };
             const styleOff = { text: 'Folga', badgeColor: 'bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400', borderColor: 'border border-zinc-200 dark:border-white/5', icon: '<i class="ph-fill ph-house text-zinc-400 text-sm"></i>' };
             const styleExtra = { text: 'Apoio / Extra', badgeColor: 'bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400', borderColor: 'border border-zinc-200 dark:border-white/5 border-dashed', icon: '<i class="ph-fill ph-users text-zinc-400 text-sm"></i>' };
 
-            // Aplica a lógica 12x36 apenas nas 4 primeiras equipas
             if (index === 0) return isEvenDay ? (isDayShift ? styleWorkingNow : styleOffDay) : styleOff; 
             if (index === 1) return isEvenDay ? (!isDayShift ? styleWorkingNow : styleWaitingNight) : styleOff; 
             if (index === 2) return !isEvenDay ? (isDayShift ? styleWorkingNow : styleOffDay) : styleOff; 
@@ -138,16 +156,19 @@ createApp({
         };
 
         const clearLogs = () => { if(confirm('Apagar histórico?')) { db.value.logs = []; syncToFirebase(); } };
-        const getRoleName = (id) => (db.value.roles.find(x => x.id === id) || {}).name || '?';
-        const getRoleColor = (id) => (db.value.roles.find(x => x.id === id) || {}).color || '#ccc';
+        
+        // Retorna a cor predefinida se não encontrar (Cinza)
+        const getRoleName = (id) => (db.value.roles.find(x => x.id === id) || {}).name || 'Desconhecido';
+        const getRoleColor = (id) => (db.value.roles.find(x => x.id === id) || {}).color || '#9ca3af';
+        
         const filteredMembers = (members) => searchQuery.value ? members.filter(m => m.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || m.area.toLowerCase().includes(searchQuery.value.toLowerCase())) : members;
         const toggleTheme = () => { isDark.value = !isDark.value; localStorage.setItem('theme', isDark.value ? 'dark' : 'light'); document.documentElement.classList.toggle('dark'); };
         
-        const openModal = (teamId) => { modalData.value = { id: null, teamId, name: '', roleId: db.value.roles[0]?.id, area: areas[0] }; showModal.value = true; };
+        const openModal = (teamId) => { modalData.value = { id: null, teamId, name: '', roleId: db.value.roles[0]?.id || '', area: areas[0] }; showModal.value = true; };
         const editMember = (teamId, member) => { modalData.value = { ...member, teamId }; showModal.value = true; };
         
         const saveMember = () => {
-            if (!modalData.value.name) return alert('Preencha o nome!');
+            if (!modalData.value.name || !modalData.value.roleId) return alert('Preencha o nome e selecione um cargo!');
             const team = db.value.teams.find(t => t.id === modalData.value.teamId);
             if (modalData.value.id) {
                 const index = team.members.findIndex(m => m.id === modalData.value.id);
@@ -196,9 +217,9 @@ createApp({
 
         return { 
             currentUser, isAuthenticating, loginEmail, loginPassword, authError, doLogin, doLogout,
-            db, isDark, searchQuery, showModal, showLogs, unreadLogs, syncing, modalData, areas, 
+            db, isDark, searchQuery, showModal, showRoleModal, showLogs, unreadLogs, syncing, modalData, newRoleData, areas, 
             getRoleName, getRoleColor, filteredMembers, toggleTheme, getTeamStatus, openModal, editMember, saveMember, 
-            dragStart, dragEnd, allowDropList, leaveDropList, dropOnList, dragEnterCard, dragLeaveCard, dropOnCard, 
+            saveRole, deleteRole, dragStart, dragEnd, allowDropList, leaveDropList, dropOnList, dragEnterCard, dragLeaveCard, dropOnCard, 
             syncToFirebase, clearLogs, addTeam, deleteTeam 
         };
     }
