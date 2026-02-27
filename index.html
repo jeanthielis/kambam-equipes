@@ -6,7 +6,6 @@
     <title>Kambam de Equipes - Ultra UI</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     
     <script>
@@ -16,7 +15,6 @@
                 extend: {
                     colors: { 
                         brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 900: '#312e81' },
-                        // Dark Mode OLED (Mais Profundo)
                         board: { light: '#f4f4f5', dark: '#000000' }, 
                         surface: { light: '#ffffff', dark: '#111111' },
                         card: { dark: '#1A1A1A' }
@@ -96,8 +94,7 @@
         <header class="h-14 bg-surface-light dark:bg-surface-dark border-b border-zinc-200 dark:border-white/5 flex items-center justify-between px-6 shrink-0 z-20">
             <div class="flex items-center gap-6">
                 <div class="flex items-center gap-2 font-bold text-lg tracking-tight text-zinc-900 dark:text-white">
-                    <i class="ph-fill ph-kanban text-brand-600 text-2xl"></i>
-                    Kambam
+                    <i class="ph-fill ph-kanban text-brand-600 text-2xl"></i> Kambam
                 </div>
                 
                 <div class="w-px h-5 bg-zinc-300 dark:bg-white/10"></div>
@@ -134,6 +131,10 @@
             </h1>
             
             <div class="flex items-center gap-2">
+                <button @click="showRoleModal = true" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-white/10 rounded-lg text-sm font-medium hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors shadow-sm flex items-center gap-1.5 dark:text-zinc-200">
+                    <i class="ph-bold ph-palette"></i> Cargos
+                </button>
+                
                 <button @click="addTeam" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-white/10 rounded-lg text-sm font-medium hover:border-brand-500 hover:text-brand-600 dark:text-zinc-200 dark:hover:text-brand-400 transition-colors shadow-sm flex items-center gap-1.5">
                     <i class="ph-bold ph-plus"></i> Nova Equipe
                 </button>
@@ -185,7 +186,8 @@
                              @dragover.prevent
                              @dragleave="dragLeaveCard($event)"
                              @drop.stop="dropOnCard($event, team.id, member)"
-                             class="bg-white dark:bg-card-dark p-3 rounded-xl shadow-sm border border-zinc-200/80 dark:border-white/10 cursor-grab active:cursor-grabbing hover:border-brand-400 dark:hover:border-white/20 transition-all group relative">
+                             class="bg-white dark:bg-card-dark p-3 rounded-xl shadow-sm border border-zinc-200/80 dark:border-white/10 border-l-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative"
+                             :style="{ borderLeftColor: getRoleColor(member.roleId) }">
                             
                             <div class="flex items-start gap-3 pointer-events-none">
                                 <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-inner mt-0.5"
@@ -202,7 +204,12 @@
                                     </div>
                                     
                                     <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                                        <span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-white/10 px-1.5 py-0.5 rounded-md">
+                                        <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border"
+                                              :style="{ 
+                                                  color: getRoleColor(member.roleId), 
+                                                  backgroundColor: getRoleColor(member.roleId) + '1A', 
+                                                  borderColor: getRoleColor(member.roleId) + '40' 
+                                              }">
                                             {{ getRoleName(member.roleId) }}
                                         </span>
                                         <div class="flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -310,6 +317,47 @@
                         <i class="ph-bold ph-check"></i> Salvar Dados
                     </button>
                     <button type="button" @click="showModal = false" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white dark:bg-white/5 px-4 py-2.5 text-sm font-semibold text-zinc-900 dark:text-zinc-300 shadow-sm border border-zinc-300 dark:border-transparent hover:bg-zinc-50 dark:hover:bg-white/10 sm:mt-0 sm:w-auto transition-colors">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showRoleModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div class="fixed inset-0 bg-zinc-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" @click="showRoleModal = false"></div>
+            
+            <div class="relative transform overflow-hidden rounded-2xl bg-surface-light dark:bg-surface-dark text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-zinc-200 dark:border-white/10">
+                <div class="px-6 py-6 sm:p-8">
+                    <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
+                        <i class="ph-bold ph-palette text-xl text-brand-500"></i>
+                        Gerenciar Cargos e Cores
+                    </h3>
+                    
+                    <div class="space-y-3 mb-6 max-h-[200px] overflow-y-auto pr-2">
+                        <div v-for="role in db.roles" :key="role.id" class="flex items-center justify-between p-3 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5">
+                            <div class="flex items-center gap-3">
+                                <span class="w-4 h-4 rounded-full" :style="{ backgroundColor: role.color }"></span>
+                                <span class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{{ role.name }}</span>
+                            </div>
+                            <button @click="deleteRole(role.id)" class="text-zinc-400 hover:text-red-500 transition-colors p-1">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-50 dark:bg-black/30 p-4 rounded-xl border border-zinc-200 dark:border-white/10">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">Adicionar Novo</h4>
+                        <div class="flex gap-3">
+                            <input type="text" v-model="newRoleData.name" placeholder="Ex: Inspetor" class="flex-1 rounded-lg border border-zinc-300 dark:border-white/10 py-2 px-3 text-sm text-zinc-900 dark:text-white bg-white dark:bg-surface-dark focus:ring-2 focus:ring-brand-600 outline-none">
+                            <input type="color" v-model="newRoleData.color" class="w-10 h-10 rounded-lg cursor-pointer border-0 p-0 bg-transparent">
+                        </div>
+                        <button @click="saveRole" class="mt-3 w-full bg-zinc-800 dark:bg-white text-white dark:text-black py-2 rounded-lg text-sm font-semibold hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors">
+                            Salvar Cargo
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-zinc-50 dark:bg-white/5 px-6 py-4 border-t border-zinc-200 dark:border-white/5 text-right">
+                    <button type="button" @click="showRoleModal = false" class="inline-flex justify-center rounded-xl bg-white dark:bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-900 dark:text-zinc-300 shadow-sm border border-zinc-300 dark:border-transparent hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors">Fechar</button>
                 </div>
             </div>
         </div>
