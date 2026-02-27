@@ -91,6 +91,12 @@
 
     <div v-else class="flex flex-col h-full w-full">
         
+        <div v-if="isReadOnly" class="bg-yellow-500/10 border-b border-yellow-500/20 px-6 py-2.5 text-yellow-700 dark:text-yellow-400 text-sm font-medium flex items-center justify-center gap-3 shrink-0">
+            <i class="ph-fill ph-warning-circle text-lg"></i>
+            Você está visualizando o histórico de posições do mês de "{{ viewingMonth }}". O quadro está bloqueado para edições.
+            <button @click="viewingMonth = ''" class="ml-2 underline hover:text-yellow-800 dark:hover:text-yellow-200">Voltar à Escala Ao Vivo</button>
+        </div>
+
         <header class="h-14 bg-surface-light dark:bg-surface-dark border-b border-zinc-200 dark:border-white/5 flex items-center justify-between px-6 shrink-0 z-20">
             <div class="flex items-center gap-6">
                 <div class="flex items-center gap-2 font-bold text-lg tracking-tight text-zinc-900 dark:text-white">
@@ -125,21 +131,41 @@
             </div>
         </header>
 
-        <div class="h-14 flex items-center justify-between px-6 shrink-0 z-10">
-            <h1 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
-                Turno Cerâmica <span class="text-zinc-400 dark:text-zinc-500 font-normal text-sm ml-2 bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded-md">Visão 12x36</span>
-            </h1>
+        <div class="h-16 flex items-center justify-between px-6 shrink-0 z-10">
+            <div class="flex items-center gap-4">
+                <h1 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
+                    Turno Cerâmica <span class="text-zinc-400 dark:text-zinc-500 font-normal text-sm ml-2 bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded-md">Visão 12x36</span>
+                </h1>
+                
+                <div class="w-px h-6 bg-zinc-300 dark:bg-white/10 mx-2"></div>
+                
+                <div class="flex items-center gap-2">
+                    <i class="ph-bold ph-calendar-blank text-zinc-400"></i>
+                    <select v-model="viewingMonth" class="bg-transparent border-0 font-medium text-sm text-zinc-700 dark:text-zinc-300 focus:ring-0 cursor-pointer outline-none">
+                        <option value="">Quadro Atual (Ao Vivo)</option>
+                        <option v-for="(_, month) in db.snapshots" :key="month" :value="month">Fechamento: {{ month }}</option>
+                    </select>
+                </div>
+            </div>
             
             <div class="flex items-center gap-2">
-                <button @click="showRoleModal = true" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-white/10 rounded-lg text-sm font-medium hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors shadow-sm flex items-center gap-1.5 dark:text-zinc-200">
-                    <i class="ph-bold ph-palette"></i> Cargos
+                
+                <button v-if="!isReadOnly" @click="showSnapshotModal = true" class="px-3 py-1.5 bg-brand-600 border border-brand-500 rounded-lg text-sm font-medium text-white hover:bg-brand-500 transition-colors shadow-sm flex items-center gap-1.5">
+                    <i class="ph-bold ph-floppy-disk"></i> Salvar Mês
+                </button>
+
+                <div v-if="!isReadOnly" class="w-px h-5 bg-zinc-300 dark:bg-white/10 mx-1"></div>
+
+                <button v-if="!isReadOnly" @click="showRoleModal = true" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-white/10 rounded-lg text-sm font-medium hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors shadow-sm flex items-center gap-1.5 dark:text-zinc-200">
+                    <i class="ph-bold ph-palette"></i> Cadastrar Cargos
                 </button>
                 
-                <button @click="addTeam" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-white/10 rounded-lg text-sm font-medium hover:border-brand-500 hover:text-brand-600 dark:text-zinc-200 dark:hover:text-brand-400 transition-colors shadow-sm flex items-center gap-1.5">
+                <button v-if="!isReadOnly" @click="addTeam" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-white/10 rounded-lg text-sm font-medium hover:border-brand-500 hover:text-brand-600 dark:text-zinc-200 dark:hover:text-brand-400 transition-colors shadow-sm flex items-center gap-1.5">
                     <i class="ph-bold ph-plus"></i> Nova Equipe
                 </button>
+
                 <button @click="showLogs = true" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-white/10 rounded-lg text-sm font-medium hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors shadow-sm relative flex items-center gap-2 dark:text-zinc-200">
-                    <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
+                    <i class="ph-bold ph-list-dashes"></i> Log
                     <span v-if="unreadLogs" class="w-2 h-2 rounded-full bg-brand-500"></span>
                 </button>
             </div>
@@ -148,20 +174,20 @@
         <main class="flex-1 overflow-x-auto overflow-y-hidden px-6 pb-6" @click="showLogs = false">
             <div class="flex h-full items-start gap-4">
                 
-                <div v-for="(team, index) in db.teams" :key="team.id" 
+                <div v-for="(team, index) in displayedTeams" :key="team.id" 
                      class="flex-shrink-0 w-[320px] max-h-full flex flex-col bg-surface-light/50 dark:bg-surface-dark rounded-2xl transition-all"
                      :class="getTeamStatus(index).borderColor">
                     
                     <div class="p-3 pb-2 flex flex-col gap-2 cursor-pointer group">
                         <div class="flex justify-between items-center">
-                            <input type="text" v-model="team.title" @change="syncToFirebase"
-                                   class="input-ghost font-bold text-sm text-zinc-900 dark:text-white px-2 py-1 rounded w-[70%]">
+                            <input type="text" v-model="team.title" @change="syncToFirebase" :disabled="isReadOnly"
+                                   class="input-ghost font-bold text-sm text-zinc-900 dark:text-white px-2 py-1 rounded w-[70%]" :class="isReadOnly ? 'cursor-not-allowed opacity-80' : ''">
                             
                             <div class="flex items-center gap-1">
                                 <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-200/50 dark:bg-white/10 px-2 py-0.5 rounded-full">
                                     {{ team.members.length }}
                                 </span>
-                                <button @click="deleteTeam(team.id)" class="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 rounded transition-all">
+                                <button v-if="!isReadOnly" @click="deleteTeam(team.id)" class="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 rounded transition-all">
                                     <i class="ph-bold ph-x"></i>
                                 </button>
                             </div>
@@ -179,14 +205,15 @@
                          @dragover.prevent="allowDropList" @dragleave="leaveDropList" @drop.prevent="dropOnList($event, team.id)">
                         
                         <div v-for="member in filteredMembers(team.members)" :key="member.id"
-                             draggable="true" 
+                             :draggable="!isReadOnly" 
                              @dragstart="dragStart($event, member, team.id)" 
                              @dragend="dragEnd"
                              @dragenter.prevent="dragEnterCard($event)"
                              @dragover.prevent
                              @dragleave="dragLeaveCard($event)"
                              @drop.stop="dropOnCard($event, team.id, member)"
-                             class="bg-white dark:bg-card-dark p-3 rounded-xl shadow-sm border border-zinc-200/80 dark:border-white/10 border-l-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative"
+                             class="bg-white dark:bg-card-dark p-3 rounded-xl shadow-sm border border-zinc-200/80 dark:border-white/10 border-l-4 transition-all group relative"
+                             :class="isReadOnly ? 'cursor-default' : 'cursor-grab active:cursor-grabbing hover:shadow-md'"
                              :style="{ borderLeftColor: getRoleColor(member.roleId) }">
                             
                             <div class="flex items-start gap-3 pointer-events-none">
@@ -198,18 +225,14 @@
                                 <div class="flex-1 min-w-0">
                                     <div class="flex justify-between items-start">
                                         <h4 class="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate pr-2">{{ member.name }}</h4>
-                                        <button @click.stop="editMember(team.id, member)" class="pointer-events-auto opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-brand-500 dark:hover:text-brand-400 transition-opacity p-0.5">
+                                        <button v-if="!isReadOnly" @click.stop="editMember(team.id, member)" class="pointer-events-auto opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-brand-500 dark:hover:text-brand-400 transition-opacity p-0.5">
                                             <i class="ph-fill ph-pencil-simple text-sm"></i>
                                         </button>
                                     </div>
                                     
                                     <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
                                         <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border"
-                                              :style="{ 
-                                                  color: getRoleColor(member.roleId), 
-                                                  backgroundColor: getRoleColor(member.roleId) + '1A', 
-                                                  borderColor: getRoleColor(member.roleId) + '40' 
-                                              }">
+                                              :style="{ color: getRoleColor(member.roleId), backgroundColor: getRoleColor(member.roleId) + '1A', borderColor: getRoleColor(member.roleId) + '40' }">
                                             {{ getRoleName(member.roleId) }}
                                         </span>
                                         <div class="flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -222,14 +245,14 @@
                         </div>
                     </div>
 
-                    <div class="p-2 border-t border-zinc-200/50 dark:border-white/5">
+                    <div v-if="!isReadOnly" class="p-2 border-t border-zinc-200/50 dark:border-white/5">
                         <button @click="openModal(team.id)" class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5 rounded-lg transition-colors">
                             <i class="ph-bold ph-user-plus text-base"></i> Adicionar Operador
                         </button>
                     </div>
                 </div>
 
-                <button @click="addTeam" class="flex-shrink-0 w-[320px] h-[100px] flex items-center justify-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 border-2 border-dashed border-zinc-300 dark:border-white/10 hover:border-brand-500 dark:hover:border-brand-500 rounded-2xl bg-zinc-50/50 dark:bg-white/5 hover:bg-brand-50/50 dark:hover:bg-brand-900/10 transition-all font-medium">
+                <button v-if="!isReadOnly" @click="addTeam" class="flex-shrink-0 w-[320px] h-[100px] flex items-center justify-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 border-2 border-dashed border-zinc-300 dark:border-white/10 hover:border-brand-500 dark:hover:border-brand-500 rounded-2xl bg-zinc-50/50 dark:bg-white/5 hover:bg-brand-50/50 dark:hover:bg-brand-900/10 transition-all font-medium">
                     <i class="ph-bold ph-plus text-lg"></i> Criar Nova Equipe
                 </button>
             </div>
@@ -242,7 +265,7 @@
                     <div class="flex h-full flex-col bg-surface-light dark:bg-surface-dark border-l border-zinc-200 dark:border-white/10">
                         <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-white/5">
                             <h2 class="text-base font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-                                <i class="ph-bold ph-clock-counter-clockwise text-lg"></i> Histórico
+                                <i class="ph-bold ph-clock-counter-clockwise text-lg"></i> Log de Ações
                             </h2>
                             <button @click="showLogs = false" class="text-zinc-400 hover:text-zinc-500 dark:hover:text-white bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 p-1.5 rounded-md transition-colors">
                                 <i class="ph-bold ph-x"></i>
@@ -270,8 +293,8 @@
                                 </li>
                             </ul>
                         </div>
-                        <div class="p-4 border-t border-zinc-200 dark:border-white/5">
-                            <button @click="clearLogs" class="w-full rounded-lg border border-red-200 dark:border-red-900/30 bg-white dark:bg-transparent px-4 py-2 text-sm font-medium text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Limpar Todo o Histórico</button>
+                        <div v-if="!isReadOnly" class="p-4 border-t border-zinc-200 dark:border-white/5">
+                            <button @click="clearLogs" class="w-full rounded-lg border border-red-200 dark:border-red-900/30 bg-white dark:bg-transparent px-4 py-2 text-sm font-medium text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Limpar Histórico</button>
                         </div>
                     </div>
                 </div>
@@ -282,20 +305,17 @@
     <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <div class="fixed inset-0 bg-zinc-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" @click="showModal = false"></div>
-            
             <div class="relative transform overflow-hidden rounded-2xl bg-surface-light dark:bg-surface-dark text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-zinc-200 dark:border-white/10">
                 <div class="px-6 py-6 sm:p-8">
                     <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
                         <i class="ph-bold ph-user-circle text-xl text-brand-500"></i>
                         {{ modalData.id ? 'Editar Detalhes' : 'Adicionar Colaborador' }}
                     </h3>
-                    
                     <div class="space-y-5">
                         <div>
                             <label class="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-1">Nome Completo</label>
                             <input type="text" v-model="modalData.name" placeholder="Ex: João Silva" class="block w-full rounded-xl border border-zinc-300 dark:border-white/10 py-2.5 px-3 text-zinc-900 dark:text-white bg-transparent focus:ring-2 focus:ring-brand-600 outline-none transition-shadow">
                         </div>
-                        
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-1">Cargo / Função</label>
@@ -330,34 +350,65 @@
                 <div class="px-6 py-6 sm:p-8">
                     <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
                         <i class="ph-bold ph-palette text-xl text-brand-500"></i>
-                        Gerenciar Cargos e Cores
+                        Cadastrar Cargos
                     </h3>
                     
                     <div class="space-y-3 mb-6 max-h-[200px] overflow-y-auto pr-2">
-                        <div v-for="role in db.roles" :key="role.id" class="flex items-center justify-between p-3 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5">
+                        <div v-for="role in db.roles" :key="role.id" class="flex items-center justify-between p-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5">
                             <div class="flex items-center gap-3">
-                                <span class="w-4 h-4 rounded-full" :style="{ backgroundColor: role.color }"></span>
+                                <span class="w-4 h-4 rounded-full shadow-inner" :style="{ backgroundColor: role.color }"></span>
                                 <span class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{{ role.name }}</span>
                             </div>
-                            <button @click="deleteRole(role.id)" class="text-zinc-400 hover:text-red-500 transition-colors p-1">
+                            <button @click="deleteRole(role.id)" class="text-zinc-400 hover:text-red-500 transition-colors p-1" title="Excluir cargo">
                                 <i class="ph-bold ph-trash"></i>
                             </button>
                         </div>
                     </div>
 
-                    <div class="bg-zinc-50 dark:bg-black/30 p-4 rounded-xl border border-zinc-200 dark:border-white/10">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">Adicionar Novo</h4>
+                    <div class="bg-zinc-50 dark:bg-black/30 p-5 rounded-xl border border-zinc-200 dark:border-white/10">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3 flex items-center gap-2">
+                            <i class="ph-bold ph-plus-circle"></i> Novo Cargo
+                        </h4>
                         <div class="flex gap-3">
-                            <input type="text" v-model="newRoleData.name" placeholder="Ex: Inspetor" class="flex-1 rounded-lg border border-zinc-300 dark:border-white/10 py-2 px-3 text-sm text-zinc-900 dark:text-white bg-white dark:bg-surface-dark focus:ring-2 focus:ring-brand-600 outline-none">
-                            <input type="color" v-model="newRoleData.color" class="w-10 h-10 rounded-lg cursor-pointer border-0 p-0 bg-transparent">
+                            <input type="text" v-model="newRoleData.name" placeholder="Ex: Inspetor, Técnico..." class="flex-1 rounded-lg border border-zinc-300 dark:border-white/10 py-2 px-3 text-sm text-zinc-900 dark:text-white bg-white dark:bg-surface-dark focus:ring-2 focus:ring-brand-600 outline-none">
+                            <input type="color" v-model="newRoleData.color" class="w-10 h-10 rounded-lg cursor-pointer border-0 p-0 bg-transparent" title="Escolha a cor do cargo">
                         </div>
-                        <button @click="saveRole" class="mt-3 w-full bg-zinc-800 dark:bg-white text-white dark:text-black py-2 rounded-lg text-sm font-semibold hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors">
-                            Salvar Cargo
+                        <button @click="saveRole" class="mt-4 w-full bg-zinc-800 dark:bg-white text-white dark:text-black py-2.5 rounded-lg text-sm font-semibold hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors shadow-sm">
+                            Adicionar Cargo à Lista
                         </button>
                     </div>
                 </div>
                 <div class="bg-zinc-50 dark:bg-white/5 px-6 py-4 border-t border-zinc-200 dark:border-white/5 text-right">
-                    <button type="button" @click="showRoleModal = false" class="inline-flex justify-center rounded-xl bg-white dark:bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-900 dark:text-zinc-300 shadow-sm border border-zinc-300 dark:border-transparent hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors">Fechar</button>
+                    <button type="button" @click="showRoleModal = false" class="inline-flex justify-center rounded-xl bg-white dark:bg-white/5 px-4 py-2.5 text-sm font-semibold text-zinc-900 dark:text-zinc-300 shadow-sm border border-zinc-300 dark:border-transparent hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors">Concluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showSnapshotModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div class="fixed inset-0 bg-zinc-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" @click="showSnapshotModal = false"></div>
+            
+            <div class="relative transform overflow-hidden rounded-2xl bg-surface-light dark:bg-surface-dark text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-zinc-200 dark:border-white/10">
+                <div class="px-6 py-6 sm:p-8">
+                    <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-2 flex items-center gap-2">
+                        <i class="ph-bold ph-floppy-disk text-xl text-brand-500"></i>
+                        Salvar Fechamento de Mês
+                    </h3>
+                    <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+                        Isto criará uma fotografia exata de onde os colaboradores estão alocados agora. Poderá consultar esta grelha no futuro através do Histórico.
+                    </p>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-1">Referência do Mês (Ex: Janeiro/2026)</label>
+                        <input type="text" v-model="snapshotMonth" placeholder="Mês e Ano" class="block w-full rounded-xl border border-zinc-300 dark:border-white/10 py-2.5 px-3 text-zinc-900 dark:text-white bg-transparent focus:ring-2 focus:ring-brand-600 outline-none transition-shadow">
+                    </div>
+                </div>
+                <div class="bg-zinc-50 dark:bg-white/5 px-6 py-4 sm:flex sm:flex-row-reverse sm:px-8 border-t border-zinc-200 dark:border-white/5">
+                    <button type="button" @click="saveMonthSnapshot" class="inline-flex w-full justify-center items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-500 sm:ml-3 sm:w-auto transition-colors">
+                        Salvar no Cofre
+                    </button>
+                    <button type="button" @click="showSnapshotModal = false" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white dark:bg-white/5 px-4 py-2.5 text-sm font-semibold text-zinc-900 dark:text-zinc-300 shadow-sm border border-zinc-300 dark:border-transparent hover:bg-zinc-50 dark:hover:bg-white/10 sm:mt-0 sm:w-auto transition-colors">Cancelar</button>
                 </div>
             </div>
         </div>
