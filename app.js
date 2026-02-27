@@ -3,14 +3,12 @@ import { firestoreDocRef, auth, setDoc, onSnapshot, signInWithEmailAndPassword, 
 
 createApp({
     setup() {
-        // Estado de Autenticação
         const currentUser = ref(null);
         const loginEmail = ref('');
         const loginPassword = ref('');
         const authError = ref('');
         const isAuthenticating = ref(true);
 
-        // Estado da Aplicação
         const db = ref({ teams: [], roles: [], logs: [] });
         const isDark = ref(false);
         const searchQuery = ref('');
@@ -51,24 +49,17 @@ createApp({
         const doLogin = async () => {
             authError.value = '';
             if (!loginEmail.value || !loginPassword.value) {
-                authError.value = 'Preencha todos os campos.';
-                return;
+                authError.value = 'Preencha todos os campos.'; return;
             }
             try {
                 await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
-                loginEmail.value = '';
-                loginPassword.value = '';
+                loginEmail.value = ''; loginPassword.value = '';
             } catch (error) {
-                console.error(error);
                 authError.value = 'Credenciais inválidas. Tente novamente.';
             }
         };
 
-        const doLogout = async () => {
-            if (confirm('Deseja terminar a sessão?')) {
-                await signOut(auth);
-            }
-        };
+        const doLogout = async () => { if (confirm('Deseja terminar a sessão?')) await signOut(auth); };
 
         const loadDatabase = () => {
             if(firestoreDocRef) {
@@ -90,54 +81,52 @@ createApp({
         const syncToFirebase = async () => {
             if(!firestoreDocRef || !currentUser.value) return;
             syncing.value = true;
-            try {
-                await setDoc(firestoreDocRef, JSON.parse(JSON.stringify(db.value)));
-            } catch (error) {
-                console.error("Erro ao guardar: ", error);
-            } finally {
-                syncing.value = false;
-            }
+            try { await setDoc(firestoreDocRef, JSON.parse(JSON.stringify(db.value))); } 
+            catch (error) { console.error(error); } 
+            finally { syncing.value = false; }
         };
 
-        // --- GESTÃO DE EQUIPES ---
         const addTeam = () => {
-            db.value.teams.push({
-                id: 't' + Date.now(),
-                title: 'Nova Equipe',
-                members: []
-            });
-            addLog(`Uma nova equipe foi criada.`);
-            syncToFirebase();
+            db.value.teams.push({ id: 't' + Date.now(), title: 'Nova Equipe', members: [] });
+            addLog(`Uma nova equipe foi criada.`); syncToFirebase();
         };
 
         const deleteTeam = (teamId) => {
-            if (confirm("Tem certeza que deseja remover esta equipe inteira? Todos os colaboradores nela serão removidos do painel.")) {
+            if (confirm("Remover esta equipe inteira?")) {
                 const teamName = db.value.teams.find(t => t.id === teamId)?.title || 'Equipe';
                 db.value.teams = db.value.teams.filter(t => t.id !== teamId);
-                addLog(`A equipe "${teamName}" foi removida.`);
-                syncToFirebase();
+                addLog(`A equipe "${teamName}" foi removida.`); syncToFirebase();
             }
         };
 
+        // --- LÓGICA DE DESTAQUE REFINADA ---
         const getTeamStatus = (index) => {
             const diffDays = Math.floor((new Date().setHours(0,0,0,0) - new Date(2026, 1, 26)) / (1000 * 60 * 60 * 24));
             const isEvenDay = diffDays % 2 === 0;
-            const isDayShift = new Date().getHours() >= 6 && new Date().getHours() < 18;
+            const hour = new Date().getHours();
+            const isDayShift = hour >= 6 && hour < 18;
 
-            const styleActiveDay = { text: 'Trabalhando (06h - 18h)', badgeColor: 'bg-green-100 text-green-800', borderColor: 'border-green-400 dark:border-green-600', icon: '☀️' };
-            const styleActiveNight = { text: 'Trabalhando (18h - 06h)', badgeColor: 'bg-indigo-100 text-indigo-800', borderColor: 'border-indigo-400 dark:border-indigo-500', icon: '🌙' };
-            const styleWaitingNight = { text: 'Entra hoje às 18h', badgeColor: 'bg-blue-50 text-blue-600', borderColor: 'border-gray-200 dark:border-gray-700', icon: '⏳' };
-            const styleOffDay = { text: 'Folga (Trabalhou ontem)', badgeColor: 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', borderColor: 'border-gray-200 dark:border-gray-700 opacity-80', icon: '🛌' };
-            const styleOff = { text: 'Apoio / Extra', badgeColor: 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', borderColor: 'border-gray-200 dark:border-gray-700 opacity-70', icon: '⚙️' };
+            // ESTILO 1: Equipa que está ATIVAMENTE a trabalhar agora (Destaque Verde Forte)
+            const styleWorkingNow = { 
+                text: isDayShift ? 'No Turno (06h - 18h)' : 'No Turno (18h - 06h)', 
+                badgeColor: 'bg-green-500/15 text-green-700 dark:text-green-400', 
+                borderColor: 'border-2 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.15)] dark:bg-[#0A1A10]', // Fundo sutilmente verde no escuro
+                icon: '<i class="ph-fill ph-check-circle text-green-600 dark:text-green-400 text-sm"></i>' 
+            };
 
-            // Aplica a lógica 12x36 apenas nas 4 primeiras equipes
-            if (index === 0) return isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; 
-            if (index === 1) return isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; 
-            if (index === 2) return !isEvenDay ? (isDayShift ? styleActiveDay : styleOffDay) : styleOff; 
-            if (index === 3) return !isEvenDay ? (!isDayShift ? styleActiveNight : styleWaitingNight) : styleOff; 
+            // ESTILO 2: Restantes equipas (Neutras, bordas quase invisíveis)
+            const styleWaitingNight = { text: 'Entra às 18h', badgeColor: 'bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400', borderColor: 'border border-zinc-200 dark:border-white/5', icon: '<i class="ph-fill ph-clock text-zinc-400 text-sm"></i>' };
+            const styleOffDay = { text: 'Folga (Saiu às 06h)', badgeColor: 'bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400', borderColor: 'border border-zinc-200 dark:border-white/5', icon: '<i class="ph-fill ph-moon-stars text-zinc-400 text-sm"></i>' };
+            const styleOff = { text: 'Folga', badgeColor: 'bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400', borderColor: 'border border-zinc-200 dark:border-white/5', icon: '<i class="ph-fill ph-house text-zinc-400 text-sm"></i>' };
+            const styleExtra = { text: 'Apoio / Extra', badgeColor: 'bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400', borderColor: 'border border-zinc-200 dark:border-white/5 border-dashed', icon: '<i class="ph-fill ph-users text-zinc-400 text-sm"></i>' };
+
+            // Aplica a lógica 12x36 apenas nas 4 primeiras equipas
+            if (index === 0) return isEvenDay ? (isDayShift ? styleWorkingNow : styleOffDay) : styleOff; 
+            if (index === 1) return isEvenDay ? (!isDayShift ? styleWorkingNow : styleWaitingNight) : styleOff; 
+            if (index === 2) return !isEvenDay ? (isDayShift ? styleWorkingNow : styleOffDay) : styleOff; 
+            if (index === 3) return !isEvenDay ? (!isDayShift ? styleWorkingNow : styleWaitingNight) : styleOff; 
             
-            // Equipes adicionais assumem status neutro de apoio
-            return styleOff;
+            return styleExtra;
         };
 
         const addLog = (message) => {
@@ -173,34 +162,20 @@ createApp({
             syncToFirebase();
         };
 
-        const dragStart = (e, member, teamId) => { 
-            draggedItem = member; sourceTeamId = teamId; 
-            setTimeout(() => e.target.classList.add('dragging'), 0); 
-        };
-        
-        const dragEnd = (e) => { 
-            e.target.classList.remove('dragging'); 
-            document.querySelectorAll('.drag-over-list, .drag-over-card').forEach(el => el.classList.remove('drag-over-list', 'drag-over-card')); 
-        };
-
+        const dragStart = (e, member, teamId) => { draggedItem = member; sourceTeamId = teamId; setTimeout(() => e.target.classList.add('dragging'), 0); };
+        const dragEnd = (e) => { e.target.classList.remove('dragging'); document.querySelectorAll('.drag-over-list, .drag-over-card').forEach(el => el.classList.remove('drag-over-list', 'drag-over-card')); };
         const allowDropList = (e) => { e.currentTarget.classList.add('drag-over-list'); };
         const leaveDropList = (e) => { e.currentTarget.classList.remove('drag-over-list'); };
         
         const dropOnList = (e, targetTeamId) => {
             e.currentTarget.classList.remove('drag-over-list');
-            if(!draggedItem) return;
-
+            if(!draggedItem || sourceTeamId === targetTeamId) return; 
             const sourceTeam = db.value.teams.find(t => t.id === sourceTeamId);
             const targetTeam = db.value.teams.find(t => t.id === targetTeamId);
-            
-            if (sourceTeamId === targetTeamId) return; 
-
             sourceTeam.members = sourceTeam.members.filter(m => m.id !== draggedItem.id);
             targetTeam.members.push(draggedItem);
-            
             addLog(`Movimentação: ${draggedItem.name} foi para ${targetTeam.title}.`);
-            draggedItem = null; sourceTeamId = null;
-            syncToFirebase();
+            draggedItem = null; sourceTeamId = null; syncToFirebase();
         };
 
         const dragEnterCard = (e) => { e.currentTarget.classList.add('drag-over-card'); };
@@ -209,23 +184,14 @@ createApp({
         const dropOnCard = (e, targetTeamId, targetMember) => {
             e.currentTarget.classList.remove('drag-over-card');
             if (!draggedItem || draggedItem.id === targetMember.id) return;
-
             const sourceTeam = db.value.teams.find(t => t.id === sourceTeamId);
             const targetTeam = db.value.teams.find(t => t.id === targetTeamId);
-            
             sourceTeam.members = sourceTeam.members.filter(m => m.id !== draggedItem.id);
-            
             const targetIndex = targetTeam.members.findIndex(m => m.id === targetMember.id);
             targetTeam.members.splice(targetIndex, 0, draggedItem);
-            
-            if (sourceTeamId === targetTeamId) {
-                addLog(`Reordenação: Posição de ${draggedItem.name} ajustada.`);
-            } else {
-                addLog(`Movimentação: ${draggedItem.name} foi para ${targetTeam.title}.`);
-            }
-            
-            draggedItem = null; sourceTeamId = null;
-            syncToFirebase();
+            if (sourceTeamId === targetTeamId) addLog(`Reordenação: Posição de ${draggedItem.name} ajustada.`);
+            else addLog(`Movimentação: ${draggedItem.name} foi para ${targetTeam.title}.`);
+            draggedItem = null; sourceTeamId = null; syncToFirebase();
         };
 
         return { 
@@ -233,7 +199,7 @@ createApp({
             db, isDark, searchQuery, showModal, showLogs, unreadLogs, syncing, modalData, areas, 
             getRoleName, getRoleColor, filteredMembers, toggleTheme, getTeamStatus, openModal, editMember, saveMember, 
             dragStart, dragEnd, allowDropList, leaveDropList, dropOnList, dragEnterCard, dragLeaveCard, dropOnCard, 
-            syncToFirebase, clearLogs, addTeam, deleteTeam // Funções de equipe exportadas aqui
+            syncToFirebase, clearLogs, addTeam, deleteTeam 
         };
     }
 }).mount('#app');
