@@ -7,6 +7,8 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -14,8 +16,10 @@
                 extend: {
                     colors: { 
                         brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 900: '#312e81' },
-                        board: { light: '#f4f4f5', dark: '#09090b' }, // Zinc 100 / Zinc 950
-                        surface: { light: '#ffffff', dark: '#18181b' } // White / Zinc 900
+                        // Dark Mode OLED (Mais Profundo)
+                        board: { light: '#f4f4f5', dark: '#000000' }, 
+                        surface: { light: '#ffffff', dark: '#111111' },
+                        card: { dark: '#1A1A1A' }
                     },
                     fontFamily: { sans: ['Inter', 'sans-serif'] }
                 }
@@ -28,23 +32,20 @@
         body { font-family: 'Inter', sans-serif; background-color: theme('colors.board.light'); }
         .dark body { background-color: theme('colors.board.dark'); }
         
-        /* Scrollbar Minimalista Oculta (Aparece no hover) */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
         ::-webkit-scrollbar-thumb:hover { background-color: rgba(156, 163, 175, 0.5); }
         
-        /* Drag and Drop Suave */
         .drag-over-list { background-color: rgba(99, 102, 241, 0.08) !important; border-radius: 12px; }
-        .dragging { opacity: 0.8; transform: scale(1.02) rotate(1deg); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); z-index: 50; }
+        .dragging { opacity: 0.8; transform: scale(1.02) rotate(1deg); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); z-index: 50; }
         .drag-over-card { border-top: 3px solid #6366f1 !important; margin-top: 4px; padding-top: 4px; }
         
         [v-cloak] { display: none; }
         
-        /* Transições de input limpas */
         .input-ghost { background: transparent; border-color: transparent; outline: none; transition: all 0.2s; }
         .input-ghost:focus { background: theme('colors.surface.light'); box-shadow: 0 0 0 2px theme('colors.brand.500'); }
-        .dark .input-ghost:focus { background: theme('colors.surface.dark'); }
+        .dark .input-ghost:focus { background: theme('colors.surface.dark'); box-shadow: 0 0 0 2px theme('colors.brand.500');}
     </style>
 </head>
 <body class="text-zinc-800 dark:text-zinc-200 h-screen flex flex-col transition-colors duration-300">
@@ -55,33 +56,36 @@
         <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600"></div>
     </div>
 
-    <div v-else-if="!currentUser" class="flex-1 flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4 relative overflow-hidden">
+    <div v-else-if="!currentUser" class="flex-1 flex items-center justify-center bg-zinc-50 dark:bg-black p-4 relative overflow-hidden">
         <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-500/20 rounded-full blur-3xl"></div>
         <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
         
-        <div class="max-w-[400px] w-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-zinc-800 p-10 z-10 relative">
+        <div class="max-w-[400px] w-full bg-white/70 dark:bg-[#111111]/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-white/10 p-10 z-10 relative">
             <div class="text-center mb-10">
                 <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-500/30 mb-5">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <i class="ph-bold ph-users-three text-2xl"></i>
                 </div>
                 <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Escala 12x36</h2>
                 <p class="text-zinc-500 dark:text-zinc-400 mt-2 text-sm">Autenticação de Supervisor</p>
             </div>
 
             <form @submit.prevent="doLogin" class="space-y-4">
-                <div>
-                    <input type="email" v-model="loginEmail" placeholder="E-mail de acesso" required class="w-full px-4 py-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all placeholder-zinc-400">
+                <div class="relative">
+                    <i class="ph ph-envelope absolute left-4 top-4 text-zinc-400 text-lg"></i>
+                    <input type="email" v-model="loginEmail" placeholder="E-mail de acesso" required class="w-full pl-11 pr-4 py-3.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white/50 dark:bg-black/50 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all placeholder-zinc-400 dark:text-white">
                 </div>
-                <div>
-                    <input type="password" v-model="loginPassword" placeholder="Palavra-passe" required class="w-full px-4 py-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all placeholder-zinc-400">
+                <div class="relative">
+                    <i class="ph ph-lock-key absolute left-4 top-4 text-zinc-400 text-lg"></i>
+                    <input type="password" v-model="loginPassword" placeholder="Palavra-passe" required class="w-full pl-11 pr-4 py-3.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white/50 dark:bg-black/50 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all placeholder-zinc-400 dark:text-white">
                 </div>
 
                 <div v-if="authError" class="p-3 bg-red-50/80 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 text-center">
                     {{ authError }}
                 </div>
 
-                <button type="submit" class="w-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 text-white font-semibold py-3.5 px-4 rounded-xl shadow-md transition-all mt-4">
+                <button type="submit" class="w-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 text-white font-semibold py-3.5 px-4 rounded-xl shadow-md transition-all mt-4 flex items-center justify-center gap-2">
                     Aceder à Plataforma
+                    <i class="ph-bold ph-arrow-right"></i>
                 </button>
             </form>
         </div>
@@ -89,50 +93,52 @@
 
     <div v-else class="flex flex-col h-full w-full">
         
-        <header class="h-14 bg-surface-light dark:bg-surface-dark border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-6 shrink-0 z-20">
+        <header class="h-14 bg-surface-light dark:bg-surface-dark border-b border-zinc-200 dark:border-white/5 flex items-center justify-between px-6 shrink-0 z-20">
             <div class="flex items-center gap-6">
                 <div class="flex items-center gap-2 font-bold text-lg tracking-tight text-zinc-900 dark:text-white">
-                    <div class="w-6 h-6 rounded-md bg-brand-600 flex items-center justify-center text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 6h16M4 12h16m-7 6h7"></path></svg></div>
+                    <i class="ph-fill ph-kanban text-brand-600 text-2xl"></i>
                     Kambam
                 </div>
                 
-                <div class="w-px h-5 bg-zinc-300 dark:bg-zinc-700"></div>
+                <div class="w-px h-5 bg-zinc-300 dark:bg-white/10"></div>
                 
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <i class="ph-bold ph-magnifying-glass text-zinc-400"></i>
                     </div>
-                    <input type="text" v-model="searchQuery" placeholder="Buscar colaborador ou máquina (Ctrl+K)" 
-                           class="block w-80 pl-9 pr-3 py-1.5 border border-transparent bg-zinc-100 dark:bg-zinc-800/80 rounded-full text-sm placeholder-zinc-500 focus:border-brand-500 focus:bg-white dark:focus:bg-zinc-900 focus:ring-0 transition-all">
+                    <input type="text" v-model="searchQuery" placeholder="Buscar colaborador ou área..." 
+                           class="block w-80 pl-9 pr-3 py-1.5 border border-transparent bg-zinc-100 dark:bg-white/5 rounded-full text-sm placeholder-zinc-500 focus:border-brand-500 focus:bg-white dark:focus:bg-[#1A1A1A] dark:text-white focus:ring-0 transition-all outline-none">
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-4">
                 <span v-if="syncing" class="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
                     <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
                     Sincronizando
                 </span>
                 
-                <button @click="toggleTheme" class="p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                    <svg v-if="!isDark" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-                    <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <button @click="toggleTheme" class="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors text-xl">
+                    <i v-if="!isDark" class="ph-fill ph-moon"></i>
+                    <i v-else class="ph-fill ph-sun"></i>
                 </button>
                 
-                <button @click="doLogout" class="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-xs text-zinc-700 dark:text-zinc-300 hover:ring-2 hover:ring-brand-500 transition-all cursor-pointer border border-zinc-300 dark:border-zinc-600" title="Terminar Sessão">
-                    SP
+                <button @click="doLogout" class="flex items-center gap-2 bg-zinc-100 dark:bg-white/5 hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-600 dark:text-zinc-300 hover:text-red-500 dark:hover:text-red-400 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors border border-zinc-200 dark:border-white/5">
+                    <i class="ph-bold ph-power text-base"></i> Sair
                 </button>
             </div>
         </header>
 
         <div class="h-14 flex items-center justify-between px-6 shrink-0 z-10">
-            <h1 class="text-xl font-bold tracking-tight">Turno Cerâmica <span class="text-zinc-400 font-normal text-lg ml-2">Visão 12x36</span></h1>
+            <h1 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
+                Turno Cerâmica <span class="text-zinc-400 dark:text-zinc-500 font-normal text-sm ml-2 bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded-md">Visão 12x36</span>
+            </h1>
             
             <div class="flex items-center gap-2">
-                <button @click="addTeam" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-medium hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-400 transition-colors shadow-sm">
-                    + Nova Equipe
+                <button @click="addTeam" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-white/10 rounded-lg text-sm font-medium hover:border-brand-500 hover:text-brand-600 dark:text-zinc-200 dark:hover:text-brand-400 transition-colors shadow-sm flex items-center gap-1.5">
+                    <i class="ph-bold ph-plus"></i> Nova Equipe
                 </button>
-                <button @click="showLogs = true" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-sm relative flex items-center gap-2">
-                    Histórico
+                <button @click="showLogs = true" class="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-zinc-200 dark:border-white/10 rounded-lg text-sm font-medium hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors shadow-sm relative flex items-center gap-2 dark:text-zinc-200">
+                    <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
                     <span v-if="unreadLogs" class="w-2 h-2 rounded-full bg-brand-500"></span>
                 </button>
             </div>
@@ -142,7 +148,7 @@
             <div class="flex h-full items-start gap-4">
                 
                 <div v-for="(team, index) in db.teams" :key="team.id" 
-                     class="flex-shrink-0 w-[320px] max-h-full flex flex-col bg-surface-light/50 dark:bg-surface-dark/50 rounded-2xl border border-zinc-200 dark:border-zinc-800/80 transition-all"
+                     class="flex-shrink-0 w-[320px] max-h-full flex flex-col bg-surface-light/50 dark:bg-surface-dark rounded-2xl transition-all"
                      :class="getTeamStatus(index).borderColor">
                     
                     <div class="p-3 pb-2 flex flex-col gap-2 cursor-pointer group">
@@ -151,10 +157,12 @@
                                    class="input-ghost font-bold text-sm text-zinc-900 dark:text-white px-2 py-1 rounded w-[70%]">
                             
                             <div class="flex items-center gap-1">
-                                <span class="text-xs font-semibold text-zinc-500 bg-zinc-200/50 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+                                <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-200/50 dark:bg-white/10 px-2 py-0.5 rounded-full">
                                     {{ team.members.length }}
                                 </span>
-                                <button @click="deleteTeam(team.id)" class="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 rounded transition-all">✖</button>
+                                <button @click="deleteTeam(team.id)" class="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 rounded transition-all">
+                                    <i class="ph-bold ph-x"></i>
+                                </button>
                             </div>
                         </div>
                         
@@ -177,7 +185,7 @@
                              @dragover.prevent
                              @dragleave="dragLeaveCard($event)"
                              @drop.stop="dropOnCard($event, team.id, member)"
-                             class="bg-white dark:bg-surface-dark p-3 rounded-xl shadow-sm border border-zinc-200/80 dark:border-zinc-800 cursor-grab active:cursor-grabbing hover:border-brand-400 dark:hover:border-brand-500 hover:shadow-md transition-all group relative">
+                             class="bg-white dark:bg-card-dark p-3 rounded-xl shadow-sm border border-zinc-200/80 dark:border-white/10 cursor-grab active:cursor-grabbing hover:border-brand-400 dark:hover:border-white/20 transition-all group relative">
                             
                             <div class="flex items-start gap-3 pointer-events-none">
                                 <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-inner mt-0.5"
@@ -188,18 +196,17 @@
                                 <div class="flex-1 min-w-0">
                                     <div class="flex justify-between items-start">
                                         <h4 class="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate pr-2">{{ member.name }}</h4>
-                                        <button @click.stop="editMember(team.id, member)" class="pointer-events-auto opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-brand-500 transition-opacity p-0.5">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        <button @click.stop="editMember(team.id, member)" class="pointer-events-auto opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-brand-500 dark:hover:text-brand-400 transition-opacity p-0.5">
+                                            <i class="ph-fill ph-pencil-simple text-sm"></i>
                                         </button>
                                     </div>
                                     
                                     <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                                        <span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 px-1.5 py-0.5 rounded-md">
+                                        <span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-white/10 px-1.5 py-0.5 rounded-md">
                                             {{ getRoleName(member.roleId) }}
                                         </span>
-                                        
                                         <div class="flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                            <i class="ph-bold ph-map-pin"></i>
                                             <span class="truncate max-w-[120px]">{{ member.area }}</span>
                                         </div>
                                     </div>
@@ -208,30 +215,30 @@
                         </div>
                     </div>
 
-                    <div class="p-2 border-t border-zinc-200/50 dark:border-zinc-800/50">
-                        <button @click="openModal(team.id)" class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800 rounded-lg transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            Adicionar Operador
+                    <div class="p-2 border-t border-zinc-200/50 dark:border-white/5">
+                        <button @click="openModal(team.id)" class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5 rounded-lg transition-colors">
+                            <i class="ph-bold ph-user-plus text-base"></i> Adicionar Operador
                         </button>
                     </div>
                 </div>
 
-                <button @click="addTeam" class="flex-shrink-0 w-[320px] h-[100px] flex items-center justify-center gap-2 text-zinc-500 hover:text-brand-600 border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-brand-500 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/20 hover:bg-brand-50/50 dark:hover:bg-brand-900/10 transition-all font-medium">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Criar Nova Equipe
+                <button @click="addTeam" class="flex-shrink-0 w-[320px] h-[100px] flex items-center justify-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 border-2 border-dashed border-zinc-300 dark:border-white/10 hover:border-brand-500 dark:hover:border-brand-500 rounded-2xl bg-zinc-50/50 dark:bg-white/5 hover:bg-brand-50/50 dark:hover:bg-brand-900/10 transition-all font-medium">
+                    <i class="ph-bold ph-plus text-lg"></i> Criar Nova Equipe
                 </button>
             </div>
         </main>
 
-        <div v-if="showLogs" class="absolute inset-0 z-30 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-            <div class="absolute inset-0 bg-zinc-900/30 backdrop-blur-sm transition-opacity" @click="showLogs = false"></div>
+        <div v-if="showLogs" class="absolute inset-0 z-30 overflow-hidden">
+            <div class="absolute inset-0 bg-zinc-900/30 dark:bg-black/50 backdrop-blur-sm transition-opacity" @click="showLogs = false"></div>
             <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
                 <div class="pointer-events-auto w-screen max-w-sm transform transition-transform ease-in-out duration-300 shadow-2xl">
-                    <div class="flex h-full flex-col bg-surface-light dark:bg-surface-dark border-l border-zinc-200 dark:border-zinc-800">
-                        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-                            <h2 class="text-base font-semibold text-zinc-900 dark:text-white" id="slide-over-title">Histórico de Atividade</h2>
-                            <button @click="showLogs = false" class="text-zinc-400 hover:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 p-1.5 rounded-md transition-colors">
-                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    <div class="flex h-full flex-col bg-surface-light dark:bg-surface-dark border-l border-zinc-200 dark:border-white/10">
+                        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-white/5">
+                            <h2 class="text-base font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                                <i class="ph-bold ph-clock-counter-clockwise text-lg"></i> Histórico
+                            </h2>
+                            <button @click="showLogs = false" class="text-zinc-400 hover:text-zinc-500 dark:hover:text-white bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 p-1.5 rounded-md transition-colors">
+                                <i class="ph-bold ph-x"></i>
                             </button>
                         </div>
                         <div class="relative flex-1 px-6 py-6 overflow-y-auto">
@@ -240,7 +247,7 @@
                             <ul role="list" class="-mb-8">
                                 <li v-for="(log, idx) in db.logs" :key="log.id">
                                     <div class="relative pb-8">
-                                        <span v-if="idx !== db.logs.length - 1" class="absolute left-2 top-2 -ml-px h-full w-0.5 bg-zinc-200 dark:bg-zinc-800" aria-hidden="true"></span>
+                                        <span v-if="idx !== db.logs.length - 1" class="absolute left-2 top-2 -ml-px h-full w-0.5 bg-zinc-200 dark:bg-white/10"></span>
                                         <div class="relative flex space-x-3">
                                             <div>
                                                 <span class="h-4 w-4 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center ring-4 ring-surface-light dark:ring-surface-dark mt-0.5">
@@ -256,8 +263,8 @@
                                 </li>
                             </ul>
                         </div>
-                        <div class="p-4 border-t border-zinc-200 dark:border-zinc-800">
-                            <button @click="clearLogs" class="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">Limpar Todo o Histórico</button>
+                        <div class="p-4 border-t border-zinc-200 dark:border-white/5">
+                            <button @click="clearLogs" class="w-full rounded-lg border border-red-200 dark:border-red-900/30 bg-white dark:bg-transparent px-4 py-2 text-sm font-medium text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Limpar Todo o Histórico</button>
                         </div>
                     </div>
                 </div>
@@ -265,39 +272,44 @@
         </div>
     </div>
 
-    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <div class="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm transition-opacity" @click="showModal = false"></div>
+            <div class="fixed inset-0 bg-zinc-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" @click="showModal = false"></div>
             
-            <div class="relative transform overflow-hidden rounded-2xl bg-surface-light dark:bg-surface-dark text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-zinc-200 dark:border-zinc-800">
+            <div class="relative transform overflow-hidden rounded-2xl bg-surface-light dark:bg-surface-dark text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-zinc-200 dark:border-white/10">
                 <div class="px-6 py-6 sm:p-8">
-                    <h3 class="text-lg font-semibold leading-6 text-zinc-900 dark:text-white mb-6">{{ modalData.id ? 'Editar Detalhes' : 'Adicionar Colaborador' }}</h3>
+                    <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
+                        <i class="ph-bold ph-user-circle text-xl text-brand-500"></i>
+                        {{ modalData.id ? 'Editar Detalhes' : 'Adicionar Colaborador' }}
+                    </h3>
                     
                     <div class="space-y-5">
                         <div>
-                            <label class="block text-sm font-medium leading-6 text-zinc-900 dark:text-zinc-200 mb-1">Nome Completo</label>
-                            <input type="text" v-model="modalData.name" placeholder="Ex: João Silva" class="block w-full rounded-xl border-0 py-2.5 px-3 text-zinc-900 dark:text-white shadow-sm ring-1 ring-inset ring-zinc-300 dark:ring-zinc-700 bg-transparent placeholder:text-zinc-400 focus:ring-2 focus:ring-inset focus:ring-brand-600 sm:text-sm sm:leading-6 outline-none transition-shadow">
+                            <label class="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-1">Nome Completo</label>
+                            <input type="text" v-model="modalData.name" placeholder="Ex: João Silva" class="block w-full rounded-xl border border-zinc-300 dark:border-white/10 py-2.5 px-3 text-zinc-900 dark:text-white bg-transparent focus:ring-2 focus:ring-brand-600 outline-none transition-shadow">
                         </div>
                         
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium leading-6 text-zinc-900 dark:text-zinc-200 mb-1">Cargo / Função</label>
-                                <select v-model="modalData.roleId" class="block w-full rounded-xl border-0 py-2.5 px-3 text-zinc-900 dark:text-white shadow-sm ring-1 ring-inset ring-zinc-300 dark:ring-zinc-700 bg-surface-light dark:bg-surface-dark focus:ring-2 focus:ring-inset focus:ring-brand-600 sm:text-sm sm:leading-6 outline-none cursor-pointer">
+                                <label class="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-1">Cargo / Função</label>
+                                <select v-model="modalData.roleId" class="block w-full rounded-xl border border-zinc-300 dark:border-white/10 py-2.5 px-3 text-zinc-900 dark:text-white bg-surface-light dark:bg-surface-dark focus:ring-2 focus:ring-brand-600 outline-none cursor-pointer">
                                     <option v-for="role in db.roles" :value="role.id">{{ role.name }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium leading-6 text-zinc-900 dark:text-zinc-200 mb-1">Alocação (Máquina)</label>
-                                <select v-model="modalData.area" class="block w-full rounded-xl border-0 py-2.5 px-3 text-zinc-900 dark:text-white shadow-sm ring-1 ring-inset ring-zinc-300 dark:ring-zinc-700 bg-surface-light dark:bg-surface-dark focus:ring-2 focus:ring-inset focus:ring-brand-600 sm:text-sm sm:leading-6 outline-none cursor-pointer">
+                                <label class="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-1">Alocação (Máquina)</label>
+                                <select v-model="modalData.area" class="block w-full rounded-xl border border-zinc-300 dark:border-white/10 py-2.5 px-3 text-zinc-900 dark:text-white bg-surface-light dark:bg-surface-dark focus:ring-2 focus:ring-brand-600 outline-none cursor-pointer">
                                     <option v-for="area in areas" :value="area">{{ area }}</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="bg-zinc-50 dark:bg-zinc-800/50 px-6 py-4 sm:flex sm:flex-row-reverse sm:px-8 border-t border-zinc-200 dark:border-zinc-800">
-                    <button type="button" @click="saveMember" class="inline-flex w-full justify-center rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-500 sm:ml-3 sm:w-auto transition-colors">Salvar Dados</button>
-                    <button type="button" @click="showModal = false" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white dark:bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-900 dark:text-zinc-300 shadow-sm ring-1 ring-inset ring-zinc-300 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 sm:mt-0 sm:w-auto transition-colors">Cancelar</button>
+                <div class="bg-zinc-50 dark:bg-white/5 px-6 py-4 sm:flex sm:flex-row-reverse sm:px-8 border-t border-zinc-200 dark:border-white/5">
+                    <button type="button" @click="saveMember" class="inline-flex w-full justify-center items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-500 sm:ml-3 sm:w-auto transition-colors">
+                        <i class="ph-bold ph-check"></i> Salvar Dados
+                    </button>
+                    <button type="button" @click="showModal = false" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white dark:bg-white/5 px-4 py-2.5 text-sm font-semibold text-zinc-900 dark:text-zinc-300 shadow-sm border border-zinc-300 dark:border-transparent hover:bg-zinc-50 dark:hover:bg-white/10 sm:mt-0 sm:w-auto transition-colors">Cancelar</button>
                 </div>
             </div>
         </div>
